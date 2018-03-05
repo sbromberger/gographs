@@ -285,7 +285,6 @@ func AllDijkstraShortestPaths(g *Graph) []DijkstraState {
 	for d := range ch {
 		if d.src == 5999 {
 			fmt.Println("got 5999")
-			fmt.Println(d.state)
 		}
 		ds[d.src] = d.state
 	}
