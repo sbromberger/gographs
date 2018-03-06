@@ -5,6 +5,8 @@ import (
 	"sort"
 )
 
+//UInt32SparseVec holds a row index and column pointer. If a point is defined
+//at a particular row i and column j, an edge exists between vertex i and vertex j.
 type UInt32SparseVec struct {
 	Rowidx []uint32
 	Colptr []uint32

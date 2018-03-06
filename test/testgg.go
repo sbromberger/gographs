@@ -59,7 +59,7 @@ func main() {
 	// fmt.Println("edges(g) = ", g.Edges())
 	// fmt.Println("outneighbors(g, 2) = ", g.OutNeighborsInt(2))
 
-	h := persistence.ReadStaticGraph(*fn)
+	h := persistence.ReadText(*fn)
 	// fmt.Println("edges(h) = ", h.Edges())
 	// fmt.Println("Fadj(h) = ", h.Fadj())
 	fmt.Println("Order(h) = ", h.Order())
