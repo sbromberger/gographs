@@ -1,6 +1,7 @@
 package gographs
 
 import (
+	"container/heap"
 	"fmt"
 	"math"
 	"runtime"
@@ -138,14 +139,14 @@ func (g *Graph) OutNeighborsInt(v int) []uint32 {
 // DijkstraState is a state holding dijkstra SP info
 type DijkstraState struct {
 	Parents      []uint32
-	Dists        []float64
+	Dists        []float32
 	Predecessors [][]uint32
 	Pathcounts   []int
 }
 
-const MaxDist = math.MaxFloat64
+const MaxDist = float32(math.MaxFloat32 - 1)
 
-func min(a, b float64) float64 {
+func min(a, b float32) float32 {
 	if a < b {
 		return a
 	}
@@ -155,17 +156,16 @@ func min(a, b float64) float64 {
 // DijkstraShortestPaths returns dijkstra shortest paths
 func dijkstraShortestPaths(g *Graph, srcs []uint32, withPreds bool) DijkstraState {
 	nv := g.Order()
-	pq := priorityqueue.NewFloat2PQ(nv + 1)
-	// pq := make(priorityqueue.Float2PQ, 0, nv+1)
+	pq := make(priorityqueue.PriorityQueue, len(srcs))
 	visited := make([]bool, nv)
 	parents := make([]uint32, nv)
-	dists := make([]float64, nv)
+	dists := make([]float32, nv)
 	pathcounts := make([]int, nv)
 	nPreds := 0
 	maxNPreds := 0
 	if withPreds {
 		nPreds = nv
-		maxNPreds = int(0.0015 * float32(nv))
+		maxNPreds = int(0.0015 * float64(nv))
 	}
 	preds := make([][]uint32, nPreds)
 
@@ -176,16 +176,17 @@ func dijkstraShortestPaths(g *Graph, srcs []uint32, withPreds bool) DijkstraStat
 		dists[i] = MaxDist
 	}
 
-	for _, src := range srcs {
+	for i, src := range srcs {
 		dists[src] = 0
 		pathcounts[src] = 1
 		visited[src] = true
-		pq.Push(src, 0)
+		pq[i] = &priorityqueue.Item{Value: uint32(src), Priority: 0, Index: i}
 	}
 
-	for !pq.IsEmpty() {
-		up, _ := pq.Pop()
-		u := up.Val
+	heap.Init(&pq)
+	for pq.Len() > 0 {
+		item := heap.Pop(&pq).(*priorityqueue.Item)
+		u := item.Value
 		for _, v := range g.OutNeighbors(u) {
 			alt := MaxDist
 			if dists[u] < MaxDist {
@@ -199,7 +200,7 @@ func dijkstraShortestPaths(g *Graph, srcs []uint32, withPreds bool) DijkstraStat
 				if withPreds {
 					preds[v] = append(preds[v], u)
 				}
-				pq.Push(v, min(float64(nv), alt))
+				heap.Push(&pq, &priorityqueue.Item{Value: v, Priority: min(float32(nv), alt)})
 			} else {
 				if alt < dists[v] {
 					dists[v] = alt
@@ -208,7 +209,7 @@ func dijkstraShortestPaths(g *Graph, srcs []uint32, withPreds bool) DijkstraStat
 					if withPreds {
 						preds[v] = make([]uint32, maxNPreds)
 					}
-					pq.Push(v, min(float64(nv), alt))
+					heap.Push(&pq, &priorityqueue.Item{Value: v, Priority: min(float32(nv), alt)})
 				}
 				if alt == dists[v] {
 					pathcounts[v]++
@@ -282,6 +283,7 @@ func AllDijkstraShortestPaths(g *Graph) []DijkstraState {
 	for d := range ch {
 		if d.src == 5999 {
 			fmt.Println("got 5999")
+			fmt.Println(d.state)
 		}
 		ds[d.src] = d.state
 	}
