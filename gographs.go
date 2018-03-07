@@ -2,7 +2,6 @@ package gographs
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"runtime"
 	"sync"
@@ -139,12 +138,12 @@ func (g *Graph) OutNeighborsInt(v int) []uint32 {
 // DijkstraState is a state holding dijkstra SP info
 type DijkstraState struct {
 	Parents      []uint32
-	Dists        []int
+	Dists        []float64
 	Predecessors [][]uint32
 	Pathcounts   []int
 }
 
-const MaxDist = math.MaxInt64
+const MaxDist = math.MaxFloat64
 
 func min(a, b int) int {
 	if a < b {
@@ -156,10 +155,10 @@ func min(a, b int) int {
 // DijkstraShortestPaths returns dijkstra shortest paths
 func dijkstraShortestPaths(g *Graph, srcs []uint32, withPreds bool) DijkstraState {
 	nv := g.Order()
-	pq := priorityqueue.New(nv + 1)
+	pq := make(priorityqueue.PriorityQueue, 0, nv+1)
 	visited := make([]bool, nv)
 	parents := make([]uint32, nv)
-	dists := make([]int, nv)
+	dists := make([]float64, nv)
 	pathcounts := make([]int, nv)
 	nPreds := 0
 	maxNPreds := 0
@@ -180,14 +179,11 @@ func dijkstraShortestPaths(g *Graph, srcs []uint32, withPreds bool) DijkstraStat
 		dists[src] = 0
 		pathcounts[src] = 1
 		visited[src] = true
-		pq.Push(uint32(src), 0)
+		pq.Push(&priorityqueue.Item{Value: uint32(src), Priority: 0.0})
 	}
 
 	for !pq.IsEmpty() {
-		up, err := pq.Pop()
-		if err != nil {
-			log.Fatal("error in dequeue: ", err)
-		}
+		up := pq.Pop().(*priorityqueue.Item)
 		u := up.Value
 		for _, v := range g.OutNeighbors(u) {
 			alt := MaxDist
@@ -202,7 +198,7 @@ func dijkstraShortestPaths(g *Graph, srcs []uint32, withPreds bool) DijkstraStat
 				if withPreds {
 					preds[v] = append(preds[v], u)
 				}
-				pq.Push(v, min(nv, alt))
+				pq.Push(&priorityqueue.Item{Value: v, Priority: math.Min(float64(nv), alt)})
 			} else {
 				if alt < dists[v] {
 					dists[v] = alt
@@ -211,7 +207,7 @@ func dijkstraShortestPaths(g *Graph, srcs []uint32, withPreds bool) DijkstraStat
 					if withPreds {
 						preds[v] = make([]uint32, maxNPreds)
 					}
-					pq.Push(v, min(nv, alt))
+					pq.Push(&priorityqueue.Item{Value: v, Priority: math.Min(float64(nv), alt)})
 				}
 				if alt == dists[v] {
 					pathcounts[v]++
