@@ -5,35 +5,35 @@ import (
 	"log"
 )
 
-// Item stores value and priority.
-type Item struct {
+// IntItem stores value and priority.
+type IntItem struct {
 	Value    uint32
 	Priority int
 }
 
-// PriorityQueue implements a priority queue.
-type PriorityQueue struct {
+// IntPQ implements a priority queue.
+type IntPQ struct {
 	q                       [][]uint32
 	numpri, lowind, highind int
 }
 
 // IsEmpty returns true if the queue is empty.
-func (pq *PriorityQueue) IsEmpty() bool {
+func (pq *IntPQ) IsEmpty() bool {
 	return (pq.lowind > pq.highind) ||
 		(pq.lowind == pq.highind && len(pq.q[pq.lowind]) == 0)
 }
 
 // lenPriInRange will return the length of the pq at priority n if
 // lowind <= n <= highind, or -1.
-func (pq *PriorityQueue) lenPriInRange(n int) int {
+func (pq *IntPQ) lenPriInRange(n int) int {
 	if pq.lowind <= n && n <= pq.highind {
 		return len(pq.q[n])
 	}
 	return -1
 }
 
-// Push adds a value/priority to a PriorityQueue
-func (pq *PriorityQueue) Push(val uint32, pri int) {
+// Push adds a value/priority to a PQ
+func (pq *IntPQ) Push(val uint32, pri int) {
 	atpri := append((*pq).q[pri], val)
 	pq.q[pri] = atpri
 	if pri < pq.lowind {
@@ -44,15 +44,15 @@ func (pq *PriorityQueue) Push(val uint32, pri int) {
 	}
 }
 
-// Pop retrieves the highest-priority item from the PriorityQueue
-func (pq *PriorityQueue) Pop() (Item, error) {
+// Pop retrieves the highest-priority IntIntItem from the PQ
+func (pq *IntPQ) Pop() (IntItem, error) {
 
 	for pq.lenPriInRange(pq.lowind) == 0 && pq.lowind < pq.numpri {
 		pq.lowind++
 	}
 
 	if pq.lowind > pq.highind {
-		return Item{}, errors.New("queue is empty")
+		return IntItem{}, errors.New("queue is empty")
 	}
 
 	pri := pq.lowind
@@ -60,22 +60,22 @@ func (pq *PriorityQueue) Pop() (Item, error) {
 	lenAtpri := len(atpri)
 
 	if pq.lowind == pq.numpri && lenAtpri == 0 {
-		return Item{}, errors.New("queue is empty")
+		return IntItem{}, errors.New("queue is empty")
 	}
 
 	val := (atpri)[lenAtpri-1]
 	atpri = (atpri)[:lenAtpri-1]
 	pq.q[pri] = atpri
 
-	return Item{val, pri}, nil
+	return IntItem{val, pri}, nil
 }
 
-// New creates a PriorityQueue with `n` priorities.
-func New(n int) PriorityQueue {
+// NewIntPQ creates a PQ with `n` priorities.
+func NewIntPQ(n int) IntPQ {
 
 	if n == 0 {
 		log.Fatal("priority queue must have more than zero priority levels")
 	}
 	q := make([][]uint32, n)
-	return PriorityQueue{q, n, n, 0}
+	return IntPQ{q, n, n, 0}
 }
