@@ -7,7 +7,7 @@ import (
 // An Item is something we manage in a Priority queue.
 type Item struct {
 	Value    uint32  // The Value of the item; arbitrary.
-	Priority float64 // The Priority of the item in the queue.
+	Priority float32 // The Priority of the item in the queue.
 	// The index is needed by update and is maintained by the heap.Interface methods.
 	index int // The index of the item in the heap.
 }
@@ -21,7 +21,7 @@ func (pq PriorityQueue) IsEmpty() bool { return pq.Len() == 0 }
 
 func (pq PriorityQueue) Less(i, j int) bool {
 	// We want Pop to give us the highest, not lowest, Priority so we use greater than here.
-	return pq[i].Priority > pq[j].Priority
+	return pq[i].Priority < pq[j].Priority
 }
 
 func (pq PriorityQueue) Swap(i, j int) {
@@ -47,7 +47,7 @@ func (pq *PriorityQueue) Pop() interface{} {
 }
 
 // update modifies the Priority and Value of an Item in the queue.
-func (pq *PriorityQueue) update(item *Item, Value uint32, Priority float64) {
+func (pq *PriorityQueue) update(item *Item, Value uint32, Priority float32) {
 	item.Value = Value
 	item.Priority = Priority
 	heap.Fix(pq, item.index)

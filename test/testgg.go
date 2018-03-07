@@ -76,7 +76,7 @@ func main() {
 	elapsed = time.Since(start)
 	fmt.Println("elapsed = ", elapsed)
 	fmt.Println("len(ds) = ", len(ds))
-	fmt.Println("len(ds[5999].Dists) = ", len(ds[5999].Dists))
+	// fmt.Println("len(ds[5999].Dists) = ", len(ds[5999].Dists))
 	if *memprofile != "" {
 		f, err := os.Create(*memprofile)
 		if err != nil {

@@ -145,7 +145,7 @@ type DijkstraState struct {
 
 const MaxDist = math.MaxFloat64
 
-func min(a, b int) int {
+func min(a, b float64) float64 {
 	if a < b {
 		return a
 	}
@@ -155,7 +155,8 @@ func min(a, b int) int {
 // DijkstraShortestPaths returns dijkstra shortest paths
 func dijkstraShortestPaths(g *Graph, srcs []uint32, withPreds bool) DijkstraState {
 	nv := g.Order()
-	pq := make(priorityqueue.PriorityQueue, 0, nv+1)
+	pq := priorityqueue.NewFloat2PQ(nv + 1)
+	// pq := make(priorityqueue.Float2PQ, 0, nv+1)
 	visited := make([]bool, nv)
 	parents := make([]uint32, nv)
 	dists := make([]float64, nv)
@@ -164,7 +165,7 @@ func dijkstraShortestPaths(g *Graph, srcs []uint32, withPreds bool) DijkstraStat
 	maxNPreds := 0
 	if withPreds {
 		nPreds = nv
-		maxNPreds = int(0.0015 * float64(nv))
+		maxNPreds = int(0.0015 * float32(nv))
 	}
 	preds := make([][]uint32, nPreds)
 
@@ -179,12 +180,12 @@ func dijkstraShortestPaths(g *Graph, srcs []uint32, withPreds bool) DijkstraStat
 		dists[src] = 0
 		pathcounts[src] = 1
 		visited[src] = true
-		pq.Push(&priorityqueue.Item{Value: uint32(src), Priority: 0.0})
+		pq.Push(src, 0)
 	}
 
 	for !pq.IsEmpty() {
-		up := pq.Pop().(*priorityqueue.Item)
-		u := up.Value
+		up, _ := pq.Pop()
+		u := up.Val
 		for _, v := range g.OutNeighbors(u) {
 			alt := MaxDist
 			if dists[u] < MaxDist {
@@ -198,7 +199,7 @@ func dijkstraShortestPaths(g *Graph, srcs []uint32, withPreds bool) DijkstraStat
 				if withPreds {
 					preds[v] = append(preds[v], u)
 				}
-				pq.Push(&priorityqueue.Item{Value: v, Priority: math.Min(float64(nv), alt)})
+				pq.Push(v, min(float64(nv), alt))
 			} else {
 				if alt < dists[v] {
 					dists[v] = alt
@@ -207,7 +208,7 @@ func dijkstraShortestPaths(g *Graph, srcs []uint32, withPreds bool) DijkstraStat
 					if withPreds {
 						preds[v] = make([]uint32, maxNPreds)
 					}
-					pq.Push(&priorityqueue.Item{Value: v, Priority: math.Min(float64(nv), alt)})
+					pq.Push(v, min(float64(nv), alt))
 				}
 				if alt == dists[v] {
 					pathcounts[v]++
