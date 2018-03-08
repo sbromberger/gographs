@@ -82,7 +82,7 @@ func (g *Graph) Size() int {
 }
 
 func (g DiGraph) Size() int {
-	return len(g.fmx.Rowidx) / 2
+	return len(g.fmx.Rowidx)
 }
 
 // Order returns the number of vertices

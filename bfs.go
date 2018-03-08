@@ -1,5 +1,7 @@
 package gographs
 
+import "fmt"
+
 // BFS returns a vector of levels from src.
 func BFS(g *Graph, src uint32) []uint32 {
 	nv := g.Order()
@@ -21,6 +23,7 @@ func BFS(g *Graph, src uint32) []uint32 {
 				}
 			}
 		}
+		fmt.Printf("completed level %d, size = %d\n", nLevel-1, len(nextLevel))
 		nLevel++
 		curLevel = curLevel[:0]
 		curLevel, nextLevel = nextLevel, curLevel
