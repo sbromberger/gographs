@@ -1,19 +1,11 @@
 package priorityqueue
 
 import (
-	"container/heap"
+	"github.com/sbromberger/gographs/heap"
 )
 
-// An Item is something we manage in a Priority queue.
-type Item struct {
-	Value    uint32  // The Value of the item; arbitrary.
-	Priority float32 // The Priority of the item in the queue.
-	// The Index is needed by update and is maintained by the heap.Interface methods.
-	Index int // The Index of the item in the heap.
-}
-
 // A PriorityQueue implements heap.Interface and holds Items.
-type PriorityQueue []*Item
+type PriorityQueue []*heap.Item
 
 func (pq PriorityQueue) Len() int { return len(pq) }
 
@@ -30,14 +22,14 @@ func (pq PriorityQueue) Swap(i, j int) {
 	pq[j].Index = j
 }
 
-func (pq *PriorityQueue) Push(x interface{}) {
+func (pq *PriorityQueue) Push(item *heap.Item) {
 	n := len(*pq)
-	item := x.(*Item)
+	// item := x.(*Item)
 	item.Index = n
 	*pq = append(*pq, item)
 }
 
-func (pq *PriorityQueue) Pop() interface{} {
+func (pq *PriorityQueue) Pop() *heap.Item {
 	old := *pq
 	n := len(old)
 	item := old[n-1]
@@ -47,7 +39,7 @@ func (pq *PriorityQueue) Pop() interface{} {
 }
 
 // update modifies the Priority and Value of an Item in the queue.
-func (pq *PriorityQueue) update(item *Item, Value uint32, Priority float32) {
+func (pq *PriorityQueue) update(item *heap.Item, Value uint32, Priority float32) {
 	item.Value = Value
 	item.Priority = Priority
 	heap.Fix(pq, item.Index)

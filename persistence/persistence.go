@@ -12,7 +12,8 @@ import (
 )
 
 func ReadText(fn string) gographs.Graph {
-	var fInd, fVec []uint32
+	var fInd []uint64
+	var fVec []uint32
 	f, err := os.Open(fn)
 	if err != nil {
 		log.Fatal("Cannot open file: ", err)
@@ -31,11 +32,11 @@ func ReadText(fn string) gographs.Graph {
 		if err != nil {
 			log.Fatal("Parsing err: ", err)
 		}
-		v := uint32(v64 - 1)
+		v := v64 - 1
 		if inFInd {
 			fInd = append(fInd, v)
 		} else {
-			fVec = append(fVec, v)
+			fVec = append(fVec, uint32(v))
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -68,7 +69,7 @@ func ReadStaticGraph(fn string) gographs.Graph {
 	s2 := dset2.Space()
 
 	fVec := make([]uint32, s1.SimpleExtentNPoints())
-	fInd := make([]uint32, s2.SimpleExtentNPoints())
+	fInd := make([]uint64, s2.SimpleExtentNPoints())
 
 	if err := dset1.Read(&fVec); err != nil {
 		log.Fatal("can't read f_vec: ", err)
