@@ -28,6 +28,11 @@ func sum(a []int) int {
 
 func main() {
 	flag.Parse()
+
+	fmt.Println("reading graph")
+	h := readtext.ReadText(*fn)
+	fmt.Println("Order(h) = ", h.Order())
+	fmt.Println("Size(h) = ", h.Size())
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
 		if err != nil {
@@ -39,11 +44,6 @@ func main() {
 		}
 		defer pprof.StopCPUProfile()
 	}
-
-	fmt.Println("reading graph")
-	h := readtext.ReadText(*fn)
-	fmt.Println("Order(h) = ", h.Order())
-	fmt.Println("Size(h) = ", h.Size())
 	start := time.Now()
 	gographs.BFS(&h, uint32(*src))
 	elapsed := time.Since(start)
