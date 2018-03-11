@@ -11,32 +11,34 @@ import (
 // this same notion applies for int(64)
 // such that 8 bytes * 8 bits/byte = 64
 //
-var WS = 64
-var NBITS = uint(6)
-var ONES = uint(WS - 1)
-var SZ = 1
+const (
+	ws    = 32
+	nbits = 5
+	ones  = ws - 1
+)
 
-type BitVec []int
+type BitVec []uint32
 
 func NewBitVec(n int) BitVec {
-	if n > WS {
-		SZ = (n / WS) + 1
+	sz := 1
+	if n > ws {
+		sz = (n / ws) + 1
 	}
-	log.Printf("Bit vector of base size %d (%d max bits)\n", SZ, WS*SZ)
-	return make([]int, SZ, SZ)
+	log.Printf("Bit vector of base size %d (%d max bits)\n", sz, ws*sz)
+	return make([]uint32, sz, sz)
 }
 
-func (bv BitVec) IsSet(k int) bool {
-	// return (bv[k/WS] & (1 << (uint(k % WS)))) != 0
-	return bv[k>>NBITS]&(1<<(uint(k)&ONES)) != 0
+func (bv BitVec) IsSet(k uint32) bool {
+	// return (bv[k/ws] & (1 << (uint(k % ws)))) != 0
+	return bv[k>>nbits]&(1<<(k&ones)) != 0
 }
 
-func (bv BitVec) Set(k int) {
-	bv[k>>NBITS] |= (1 << uint(uint(k)&ONES))
-	// bv[k/WS] |= (1 << uint(k%WS))
+func (bv BitVec) Set(k uint32) {
+	bv[k>>nbits] |= (1 << (k & ones))
+	// bv[k/ws] |= (1 << uint(k%ws))
 }
 
-func (bv BitVec) Clear(k int) {
-	bv[k>>NBITS] &= ^(1 << uint(uint(k)&ONES))
-	// bv[k/WS] &= ^(1 << uint(k%WS))
+func (bv BitVec) Clear(k uint32) {
+	bv[k>>nbits] &= ^(1 << (k & ones))
+	// bv[k/ws] &= ^(1 << uint(k%ws))
 }
