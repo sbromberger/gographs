@@ -6,11 +6,12 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"runtime/pprof"
 	"time"
 
 	"github.com/sbromberger/gographs"
-	"github.com/sbromberger/gographs/persistence/readtext"
+	"github.com/sbromberger/gographs/persistence/raw"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
@@ -30,7 +31,8 @@ func main() {
 	flag.Parse()
 
 	fmt.Println("reading graph")
-	h := readtext.ReadText(*fn)
+	// h := readtext.ReadText(*fn)
+	h := raw.GraphFromRaw(*fn)
 	fmt.Println("Order(h) = ", h.Order())
 	fmt.Println("Size(h) = ", h.Size())
 	if *cpuprofile != "" {
@@ -44,8 +46,11 @@ func main() {
 		}
 		defer pprof.StopCPUProfile()
 	}
+	runtime.GC()
+	debug.SetGCPercent(-1)
+	runtime.LockOSThread()
 	start := time.Now()
-	gographs.BFS(&h, uint32(*src))
+	gographs.BFSxp(&h, uint32(*src))
 	elapsed := time.Since(start)
 	fmt.Print("BFS done: ")
 	fmt.Println(elapsed)
