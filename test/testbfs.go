@@ -49,11 +49,22 @@ func main() {
 	runtime.GC()
 	debug.SetGCPercent(-1)
 	runtime.LockOSThread()
-	start := time.Now()
-	gographs.BFSxp(&h, uint32(*src))
-	elapsed := time.Since(start)
-	fmt.Print("BFS done: ")
-	fmt.Println(elapsed)
+	times := make([]time.Duration, 10)
+	for i := range times {
+		start := time.Now()
+		gographs.BFSxp(&h, uint32(*src))
+		elapsed := time.Since(start)
+		fmt.Print("BFS done: ")
+		fmt.Println(elapsed)
+		times[i] = elapsed
+	}
+	sumTime := time.Duration(0)
+	for i := range times {
+		sumTime += times[i]
+	}
+	avgintns := int64(sumTime/time.Nanosecond) / int64(len(times))
+	avg := time.Duration(time.Nanosecond * time.Duration(avgintns))
+	fmt.Printf("Average for %d runs: %s\n", len(times), avg)
 	if *memprofile != "" {
 		f, err := os.Create(*memprofile)
 		if err != nil {
@@ -68,36 +79,3 @@ func main() {
 	}
 
 }
-
-// fmt.Println("d.dists[10:20] = ", d.Dists)
-// fmt.Println("d.parents[20:30] = ", d.Parents)
-// fmt.Println("d.preds[30:40] = ", d.Predecessors)
-// fmt.Println("d.pathcounts[50:60] = ", d.Pathcounts)
-// fmt.Println("sum d.dists = ", sum(d.Dists))
-// fmt.Println("sum d.pathcounts = ", sum(d.Pathcounts))
-// z := sparsevecs.UInt32SparseVec{v1, v2}
-// fmt.Println("z.rowidx = ", z.Rowidx)
-// fmt.Println("test1: ", z.GetIndexInt(3, 0)) // F
-// fmt.Println("test2: ", z.GetIndexInt(2, 1)) // T
-// fmt.Println("test3: ", z.GetIndexInt(1, 0)) // T
-// fmt.Println("-----------------------------------------")
-// fmt.Println("ok, testing insert")
-// fmt.Println("test4:")
-// z.Insert(2, 1)
-// //      0  3  6
-// // 0  [ T  F
-// // 1    T  F
-// // 2    T  T
-// // 3    F  T
-// // 4    F  T     ]
-// fmt.Println("-----------------------------------------")
-// fmt.Println("test5: ", z)
-// z.Insert(2, 2)
-// //      0  3  6  7
-// // 0  [ T  F  F
-// // 1    T  F  F
-// // 2    T  T  T
-// // 3    F  T  F
-// // 4    F  T  F    ]
-// // 0 1 2 / 2 3 4 / 2
-// fmt.Println("test6: ", z)
