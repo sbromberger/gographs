@@ -13,7 +13,7 @@ import (
 func BFSxp(g *Graph, src uint32) {
 	nv := g.Order()
 	vertLevel := make([]uint32, nv)
-	visited := bitvec.NewBitVec(nv)
+	visited := bitvec.NewABitVec(nv)
 	curLevel := make([]uint32, 0, nv)
 	nextLevel := make([]uint32, 0, nv)
 
@@ -25,7 +25,7 @@ func BFSxp(g *Graph, src uint32) {
 	for len(curLevel) > 0 {
 		for _, v := range curLevel {
 			for _, neighbor := range g.OutNeighbors(v) {
-				if !visited.IsSet(neighbor) {
+				if !visited.Get(neighbor) {
 					nextLevel = append(nextLevel, neighbor)
 					visited.Set(neighbor)
 				}

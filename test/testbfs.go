@@ -48,11 +48,11 @@ func main() {
 	}
 	runtime.GC()
 	debug.SetGCPercent(-1)
-	runtime.LockOSThread()
+	// runtime.LockOSThread()
 	times := make([]time.Duration, 10)
 	for i := range times {
 		start := time.Now()
-		gographs.BFSxp(&h, uint32(*src))
+		gographs.BFSpar(&h, uint32(*src))
 		elapsed := time.Since(start)
 		fmt.Print("BFS done: ")
 		fmt.Println(elapsed)
