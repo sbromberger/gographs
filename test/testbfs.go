@@ -34,6 +34,8 @@ func main() {
 	fmt.Println("reading graph")
 	if *procs == 0 {
 		*procs = runtime.NumCPU()
+	} else if *procs > runtime.NumCPU() {
+		*procs = runtime.NumCPU()
 	}
 	fmt.Println("Procs = ", *procs)
 
