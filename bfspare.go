@@ -195,9 +195,6 @@ func BFSpare2(g *Graph, src uint32, procs int) {
 			{
 				// sort a part of the nextLevel in equal chunks
 				blockSize := (len(nextLevel.Data) + procs - 1) / procs
-				if blockSize < ReadBlockSize {
-					blockSize = ReadBlockSize
-				}
 
 				low := blockSize * gid
 				high := low + blockSize
