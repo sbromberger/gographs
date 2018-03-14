@@ -160,7 +160,6 @@ func BFSpare2(g *Graph, src uint32, procs int) {
 
 	var waitForLast1, waitForLast2 sync.WaitGroup
 	doneProcessingCounter := int32(procs)
-	// busyWait := int32(procs)
 	waitForLast1.Add(1)
 
 	allDone := uint32(0)
@@ -170,53 +169,76 @@ func BFSpare2(g *Graph, src uint32, procs int) {
 		runtime.LockOSThread()
 
 		for atomic.LoadUint32(&allDone) == 0 {
-			processLevel(g, currLevel, nextLevel, &visited)
+			{
+				// process the current level in parallel
+				processLevel(g, currLevel, nextLevel, &visited)
+			}
 
+			// use a counter to see how many are still processing
 			if atomic.AddInt32(&doneProcessingCounter, -1) == 0 {
-				nextLevel.Data = nextLevel.Data[:nextLevel.Head]
-				nextLevel.Head = 0
-				atomic.StoreUint32(&sentinelCount, 0)
+				// the last one updates the data size
+				{
+					nextLevel.Data = nextLevel.Data[:nextLevel.Head]
+					nextLevel.Head = 0
+					atomic.StoreUint32(&sentinelCount, 0)
+				}
 
+				// reset counters
 				atomic.StoreInt32(&doneProcessingCounter, int32(procs))
 				waitForLast2.Add(1)
+				// ... and release the routines
 				waitForLast1.Done()
 			} else {
+				// wait for the last one finishing processing to setup for the next phase
 				waitForLast1.Wait()
 			}
 
-			// wait for sorting signal
-			blockSize := (len(nextLevel.Data) + procs - 1) / procs
-			low := blockSize * gid
-			high := low + blockSize
-			if high > len(nextLevel.Data) {
-				high = len(nextLevel.Data)
-			}
-
-			zuint32.SortBYOB(nextLevel.Data[low:high], currLevel.Data[low:high])
-			for index, v := range nextLevel.Data[low:high] {
-				if v == EmptySentinel {
-					atomic.AddUint32(&sentinelCount, uint32(high-low-index))
-					break
+			{
+				// sort a part of the nextLevel in equal chunks
+				blockSize := (len(nextLevel.Data) + procs - 1) / procs
+				low := blockSize * gid
+				high := low + blockSize
+				if high > len(nextLevel.Data) {
+					high = len(nextLevel.Data)
 				}
-				vertLevel[v] = currentLevel
+
+				zuint32.SortBYOB(nextLevel.Data[low:high], currLevel.Data[low:high])
+
+				// update the vertLevels
+				//    sentinels are sorted to the end of the array,
+				//    so we can break when we find the first one
+				for index, v := range nextLevel.Data[low:high] {
+					if v == EmptySentinel {
+						atomic.AddUint32(&sentinelCount, uint32(high-low-index))
+						break
+					}
+					vertLevel[v] = currentLevel
+				}
 			}
 
+			// similarly to before, the last one finishing, does the setup for next phase
 			if atomic.AddInt32(&doneProcessingCounter, -1) == 0 {
-				fmt.Printf("completed level %d, size = %d\n", currentLevel-1, len(nextLevel.Data)-int(sentinelCount))
+				{
+					fmt.Printf("completed level %d, size = %d\n", currentLevel-1, len(nextLevel.Data)-int(sentinelCount))
 
-				currentLevel++
-				currLevel, nextLevel = nextLevel, currLevel
-				nextLevel.Data = nextLevel.Data[:maxSize:maxSize]
-				nextLevel.Head = 0
+					currentLevel++
+					currLevel, nextLevel = nextLevel, currLevel
+					nextLevel.Data = nextLevel.Data[:maxSize:maxSize]
+					nextLevel.Head = 0
 
-				if len(currLevel.Data) == 0 {
-					atomic.StoreUint32(&allDone, 1)
+					// if we are done, set the allDone flag
+					if len(currLevel.Data) == 0 {
+						atomic.StoreUint32(&allDone, 1)
+					}
 				}
 
+				// reset counters
 				atomic.StoreInt32(&doneProcessingCounter, int32(procs))
 				waitForLast1.Add(1)
+				// release the hounds
 				waitForLast2.Done()
 			} else {
+				// wait for the last one to finish
 				waitForLast2.Wait()
 			}
 		}
