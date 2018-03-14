@@ -5,7 +5,6 @@ package gographs
 import (
 	"fmt"
 	"runtime"
-	"sync"
 	"sync/atomic"
 
 	"github.com/egonelbre/async"
@@ -158,7 +157,7 @@ func BFSpare2(g *Graph, src uint32, procs int) {
 
 	currLevel.Data = append(currLevel.Data, src)
 
-	var waitForLast1, waitForLast2 sync.WaitGroup
+	var waitForLast1, waitForLast2 BusyGroup
 	doneProcessingCounter := int32(procs)
 	waitForLast1.Add(1)
 
@@ -248,4 +247,20 @@ func BFSpare2(g *Graph, src uint32, procs int) {
 		go worker(gid)
 	}
 	worker(0)
+}
+
+type BusyGroup struct{ sema int32 }
+
+func (bg *BusyGroup) Add(v int) { atomic.AddInt32(&bg.sema, int32(v)) }
+func (bg *BusyGroup) Done()     { bg.Add(-1) }
+
+func (bg *BusyGroup) Wait() {
+	for atomic.LoadInt32(&bg.sema) != 0 {
+	}
+}
+
+func (bg *BusyGroup) FairWait() {
+	for atomic.LoadInt32(&bg.sema) != 0 {
+		runtime.Gosched()
+	}
 }
