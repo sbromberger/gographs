@@ -66,16 +66,17 @@ func processLevel(g *Graph, currLevel, nextLevel *Frontier, visited *bitvec.BBit
 			i := 0
 			for ; i < len(neighbors)-3; i += 4 {
 				n1, n2, n3, n4 := neighbors[i], neighbors[i+1], neighbors[i+2], neighbors[i+3]
-				if visited.TrySet(n1) {
+				x1, x2, x3, x4 := visited.GetBuckets4(n1, n2, n3, n4)
+				if visited.TrySetWith(x1, n1) {
 					nextLevel.Write(&writeLow, &writeHigh, n1)
 				}
-				if visited.TrySet(n2) {
+				if visited.TrySetWith(x2, n2) {
 					nextLevel.Write(&writeLow, &writeHigh, n2)
 				}
-				if visited.TrySet(n3) {
+				if visited.TrySetWith(x3, n3) {
 					nextLevel.Write(&writeLow, &writeHigh, n3)
 				}
-				if visited.TrySet(n4) {
+				if visited.TrySetWith(x4, n4) {
 					nextLevel.Write(&writeLow, &writeHigh, n4)
 				}
 			}
