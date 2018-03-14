@@ -48,8 +48,6 @@ func (front *Frontier) Write(low, high *uint32, v uint32) {
 }
 
 func processLevel(g *Graph, currLevel, nextLevel *Frontier, visited *bitvec.BBitVec) {
-	runtime.LockOSThread()
-
 	writeLow, writeHigh := uint32(0), uint32(0)
 	for {
 		readLow, readHigh := currLevel.NextRead()
@@ -113,6 +111,7 @@ func BFSpare(g *Graph, src uint32, procs int) {
 	for len(currLevel.Data) > 0 {
 
 		async.Spawn(procs, func(i int) {
+			runtime.LockOSThread()
 			processLevel(g, currLevel, nextLevel, &visited)
 		}, func() { wait <- struct{}{} })
 
@@ -196,23 +195,28 @@ func BFSpare2(g *Graph, src uint32, procs int) {
 			{
 				// sort a part of the nextLevel in equal chunks
 				blockSize := (len(nextLevel.Data) + procs - 1) / procs
+				if blockSize < ReadBlockSize {
+					blockSize = ReadBlockSize
+				}
+
 				low := blockSize * gid
 				high := low + blockSize
 				if high > len(nextLevel.Data) {
 					high = len(nextLevel.Data)
 				}
 
-				zuint32.SortBYOB(nextLevel.Data[low:high], currLevel.Data[low:high])
-
-				// update the vertLevels
-				//    sentinels are sorted to the end of the array,
-				//    so we can break when we find the first one
-				for index, v := range nextLevel.Data[low:high] {
-					if v == EmptySentinel {
-						atomic.AddUint32(&sentinelCount, uint32(high-low-index))
-						break
+				if low < len(nextLevel.Data) {
+					zuint32.SortBYOB(nextLevel.Data[low:high], currLevel.Data[low:high])
+					// update the vertLevels
+					//    sentinels are sorted to the end of the array,
+					//    so we can break when we find the first one
+					for index, v := range nextLevel.Data[low:high] {
+						if v == EmptySentinel {
+							atomic.AddUint32(&sentinelCount, uint32(high-low-index))
+							break
+						}
+						vertLevel[v] = currentLevel
 					}
-					vertLevel[v] = currentLevel
 				}
 			}
 
