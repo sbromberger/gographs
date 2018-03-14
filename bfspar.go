@@ -11,14 +11,17 @@ import (
 	"github.com/shawnsmithdev/zermelo/zuint32"
 )
 
-func processOneBlock(ch chan<- uint32, g *Graph, vs []uint32, visited bitvec.ABitVec) {
+func processOneBlock(ch chan<- []uint32, g *Graph, vs []uint32, visited bitvec.ABitVec) {
+
 	for _, v := range vs {
+		neighbors := make([]uint32, 0)
 		for _, neighbor := range g.OutNeighbors(v) {
 			if !visited.AGet(neighbor) {
 				visited.ASet(neighbor)
-				ch <- neighbor
+				neighbors = append(neighbors, neighbor)
 			}
 		}
+		ch <- neighbors
 	}
 }
 
@@ -39,7 +42,7 @@ func BFSpar(g *Graph, src uint32) {
 
 	for len(curLevel) > 0 {
 		var wg sync.WaitGroup
-		ch := make(chan uint32)
+
 		chunkSize := (len(curLevel) + np - 1) / np
 		var workblocks [][]uint32
 		for i := 0; i < len(curLevel); i += chunkSize {
@@ -50,7 +53,8 @@ func BFSpar(g *Graph, src uint32) {
 			}
 			workblocks = append(workblocks, curLevel[i:end])
 		}
-
+		fmt.Println("  len(workblocks) = ", len(workblocks))
+		ch := make(chan []uint32, len(workblocks))
 		wg.Add(len(workblocks))
 		for _, vs := range workblocks {
 			go func(vs []uint32) {
@@ -62,9 +66,11 @@ func BFSpar(g *Graph, src uint32) {
 			wg.Wait()
 			close(ch)
 		}()
-		for n := range ch {
-			nextLevel = append(nextLevel, n)
-			vertLevel[n] = nLevel
+		for ns := range ch {
+			for _, n := range ns {
+				nextLevel = append(nextLevel, n)
+				vertLevel[n] = nLevel
+			}
 		}
 		zuint32.SortBYOB(nextLevel, curLevel[:nv])
 		// for _, v := range nextLevel {
