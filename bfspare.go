@@ -120,20 +120,19 @@ func BFSpare(g *Graph, src uint32, procs int) {
 		nextLevel.Data = nextLevel.Data[:nextLevel.Head]
 		nextLevel.Head = 0
 
+		sentinelCount := uint32(0)
 		async.BlockIter(len(nextLevel.Data), procs, func(low, high int) {
 			zuint32.SortBYOB(nextLevel.Data[low:high], currLevel.Data[low:high])
+			for index, v := range nextLevel.Data[low:high] {
+				if v == EmptySentinel {
+					atomic.AddUint32(&sentinelCount, uint32(high-low-index))
+					break
+				}
+				vertLevel[v] = currentLevel
+			}
 		})
 
-		sentinelCount := 0
-		for _, v := range nextLevel.Data {
-			if v == EmptySentinel {
-				sentinelCount++
-				continue
-			}
-			vertLevel[v] = currentLevel
-		}
-
-		fmt.Printf("completed level %d, size = %d\n", currentLevel-1, len(nextLevel.Data)-sentinelCount)
+		fmt.Printf("completed level %d, size = %d\n", currentLevel-1, len(nextLevel.Data)-int(sentinelCount))
 
 		currentLevel++
 		currLevel, nextLevel = nextLevel, currLevel
