@@ -20,7 +20,7 @@ func (BBitVec) offset(k uint32) (bucket, bit uint32) {
 }
 
 func (bv BBitVec) GetBucket(k uint32) uint32 {
-	return atomic.LoadUint32(&bv[a>>nbits])
+	return atomic.LoadUint32(&bv[k>>nbits])
 }
 
 func (bv BBitVec) GetBuckets4(a, b, c, d uint32) (x, y, z, w uint32) {
