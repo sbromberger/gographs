@@ -58,7 +58,7 @@ func main() {
 	times := make([]time.Duration, 10)
 	for i := range times {
 		start := time.Now()
-		gographs.BFSpare(&h, uint32(*src), *procs)
+		gographs.BFSpare2(&h, uint32(*src), *procs)
 		elapsed := time.Since(start)
 		fmt.Print("BFS done: ")
 		fmt.Println(elapsed)
