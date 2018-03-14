@@ -67,8 +67,8 @@ func BFSpar(g *Graph, src uint32) {
 			close(ch)
 		}()
 		for ns := range ch {
+			nextLevel = append(nextLevel, ns...)
 			for _, n := range ns {
-				nextLevel = append(nextLevel, n)
 				vertLevel[n] = nLevel
 			}
 		}
