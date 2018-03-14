@@ -12,9 +12,9 @@ import (
 // such that 8 bytes * 8 bits/byte = 64
 //
 const (
-	ws    = 32
 	nbits = 5
-	ones  = ws - 1
+	ws    = 1 << nbits
+	mask  = ws - 1
 )
 
 type BitVec []uint32
@@ -28,17 +28,28 @@ func NewBitVec(n int) BitVec {
 	return make([]uint32, sz, sz)
 }
 
+func (bv BitVec) offset(k uint32) (bucket, bit uint32) {
+	return k >> nbits, 1 << (k & mask)
+}
+
+func (bv BitVec) TrySet(k uint32) bool {
+	bucket, bit := bv.offset(k)
+	unset := bv[bucket]&bit == 0
+	bv[bucket] |= bit
+	return unset
+}
+
 func (bv BitVec) IsSet(k uint32) bool {
-	// return (bv[k/ws] & (1 << (uint(k % ws)))) != 0
-	return bv[k>>nbits]&(1<<(k&ones)) != 0
+	bucket, bit := bv.offset(k)
+	return bv[bucket]&bit != 0
 }
 
 func (bv BitVec) Set(k uint32) {
-	bv[k>>nbits] |= (1 << (k & ones))
-	// bv[k/ws] |= (1 << uint(k%ws))
+	bucket, bit := bv.offset(k)
+	bv[bucket] |= bit
 }
 
 func (bv BitVec) Clear(k uint32) {
-	bv[k>>nbits] &= ^(1 << (k & ones))
-	// bv[k/ws] &= ^(1 << uint(k%ws))
+	bucket, bit := bv.offset(k)
+	bv[bucket] &= ^bit
 }

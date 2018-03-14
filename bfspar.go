@@ -12,7 +12,6 @@ import (
 )
 
 func processOneBlock(ch chan<- []uint32, g *Graph, vs []uint32, visited bitvec.ABitVec) {
-
 	for _, v := range vs {
 		neighbors := make([]uint32, 0)
 		for _, neighbor := range g.OutNeighbors(v) {

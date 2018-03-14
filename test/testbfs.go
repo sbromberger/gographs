@@ -18,6 +18,7 @@ var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 var fn = flag.String("f", "", "filename to open")
 var src = flag.Int("v", 0, "source vertex")
+var procs = flag.Int("procs", 0, "number of procs to use")
 
 func sum(a []int) int {
 	s := 0
@@ -31,6 +32,11 @@ func main() {
 	flag.Parse()
 
 	fmt.Println("reading graph")
+	if *procs == 0 {
+		*procs = runtime.NumCPU()
+	}
+	fmt.Println("Procs = ", *procs)
+
 	// h := readtext.ReadText(*fn)
 	h := raw.GraphFromRaw(*fn)
 	fmt.Println("Order(h) = ", h.Order())
@@ -52,7 +58,7 @@ func main() {
 	times := make([]time.Duration, 10)
 	for i := range times {
 		start := time.Now()
-		gographs.BFSpar(&h, uint32(*src))
+		gographs.BFSpare2(&h, uint32(*src), *procs)
 		elapsed := time.Since(start)
 		fmt.Print("BFS done: ")
 		fmt.Println(elapsed)
