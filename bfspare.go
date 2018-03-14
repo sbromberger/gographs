@@ -161,7 +161,7 @@ func BFSpare2(g *Graph, src uint32, procs int) {
 	var waitForLast1, waitForLast2 sync.WaitGroup
 	doneProcessingCounter := int32(procs)
 	// busyWait := int32(procs)
-	waitForLast1.Add(procs)
+	waitForLast1.Add(1)
 
 	allDone := uint32(0)
 	sentinelCount := uint32(0)
@@ -178,10 +178,9 @@ func BFSpare2(g *Graph, src uint32, procs int) {
 				atomic.StoreUint32(&sentinelCount, 0)
 
 				atomic.StoreInt32(&doneProcessingCounter, int32(procs))
-				waitForLast2.Add(procs)
+				waitForLast2.Add(1)
 				waitForLast1.Done()
 			} else {
-				waitForLast1.Done()
 				waitForLast1.Wait()
 			}
 
@@ -215,10 +214,9 @@ func BFSpare2(g *Graph, src uint32, procs int) {
 				}
 
 				atomic.StoreInt32(&doneProcessingCounter, int32(procs))
-				waitForLast1.Add(procs)
+				waitForLast1.Add(1)
 				waitForLast2.Done()
 			} else {
-				waitForLast2.Done()
 				waitForLast2.Wait()
 			}
 		}
