@@ -58,6 +58,10 @@ func processLevel(g *Graph, currLevel, nextLevel *Frontier, visited *bitvec.BBit
 		}
 
 		for _, v := range currLevel.Data[readLow:readHigh] {
+			if v == EmptySentinel {
+				continue
+			}
+
 			neighbors := g.OutNeighbors(v)
 			i := 0
 			for ; i < len(neighbors)-3; i += 4 {
@@ -110,21 +114,26 @@ func BFSpare(g *Graph, src uint32, procs int) {
 		async.Spawn(procs, func(i int) {
 			processLevel(g, currLevel, nextLevel, &visited)
 		}, func() { wait <- struct{}{} })
-		<-wait
 
-		zuint32.SortBYOB(nextLevel.Data[:nextLevel.Head], currLevel.Data[:maxSize])
-		for nextLevel.Head > 0 && nextLevel.Data[nextLevel.Head-1] == EmptySentinel {
-			nextLevel.Head--
-		}
+		<-wait
 
 		nextLevel.Data = nextLevel.Data[:nextLevel.Head]
 		nextLevel.Head = 0
 
+		async.BlockIter(len(nextLevel.Data), procs, func(low, high int) {
+			zuint32.SortBYOB(nextLevel.Data[low:high], currLevel.Data[low:high])
+		})
+
+		sentinelCount := 0
 		for _, v := range nextLevel.Data {
+			if v == EmptySentinel {
+				sentinelCount++
+				continue
+			}
 			vertLevel[v] = currentLevel
 		}
 
-		fmt.Printf("completed level %d, size = %d\n", currentLevel-1, len(nextLevel.Data))
+		fmt.Printf("completed level %d, size = %d\n", currentLevel-1, len(nextLevel.Data)-sentinelCount)
 
 		currentLevel++
 		currLevel, nextLevel = nextLevel, currLevel
