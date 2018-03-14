@@ -202,7 +202,7 @@ func BFSpare2(g *Graph, src uint32, procs int) {
 			}
 
 			if atomic.AddInt32(&doneProcessingCounter, -1) == 0 {
-				fmt.Printf("completed level %d, size = %d\n", currentLevel-1, len(nextLevel.Data))
+				fmt.Printf("completed level %d, size = %d\n", currentLevel-1, len(nextLevel.Data)-int(sentinelCount))
 
 				currentLevel++
 				currLevel, nextLevel = nextLevel, currLevel
