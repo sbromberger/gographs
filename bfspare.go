@@ -59,7 +59,7 @@ func processLevel(g *Graph, currLevel, nextLevel *Frontier, visited *bitvec.BBit
 		}
 
 		for _, v := range currLevel.Data[readLow:readHigh] { // get and loop through a slice of ReadBlockSize vertices from currLevel
-			if v == EmptySentinel { // if we hit a sentinel within that block, we're done with the block
+			if v == EmptySentinel { // if we hit a sentinel within the block, skip it
 				continue
 			}
 
