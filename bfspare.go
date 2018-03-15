@@ -20,11 +20,13 @@ const (
 )
 
 type Frontier struct {
-	Data []uint32
-	Head uint32
+	Data []uint32 // the vector of data
+	Head uint32   // the index to the next unused element in the vector
 }
 
 // NextRead returns the low and high offsets into Frontier for reading ReadBlockSize blocks.
+// It increases Head by the ReadBlockSize.
+// Note: we only read from currLevel.
 func (front *Frontier) NextRead() (low, high uint32) {
 	high = atomic.AddUint32(&front.Head, ReadBlockSize)
 	low = high - ReadBlockSize
@@ -35,6 +37,8 @@ func (front *Frontier) NextRead() (low, high uint32) {
 }
 
 // NextWrite returns the low and high offsets into Frontier for writing WriteBlockSize blocks.
+// It increases Head by WriteBlockSize.
+// Note: we only write to nextLevel.
 func (front *Frontier) NextWrite() (low, high uint32) {
 	high = atomic.AddUint32(&front.Head, WriteBlockSize)
 	low = high - WriteBlockSize
@@ -42,6 +46,7 @@ func (front *Frontier) NextWrite() (low, high uint32) {
 }
 
 // Write inserts `v` into the next available position in the Frontier, allocating as necessary.
+// Note: we only write to nextLevel.
 func (front *Frontier) Write(low, high *uint32, v uint32) {
 	if *low >= *high {
 		*low, *high = front.NextWrite()
@@ -50,6 +55,7 @@ func (front *Frontier) Write(low, high *uint32, v uint32) {
 	*low++
 }
 
+// processLevel uses Frontiers to dequeue work from currLevel in ReadBlockSize increments.
 func processLevel(g *Graph, currLevel, nextLevel *Frontier, visited *bitvec.BBitVec) {
 	writeLow, writeHigh := uint32(0), uint32(0)
 	for {
@@ -94,7 +100,7 @@ func processLevel(g *Graph, currLevel, nextLevel *Frontier, visited *bitvec.BBit
 	}
 }
 
-// BFSxp computes a vector of levels from src.
+// BFSpare computes a vector of levels from src in parallel.
 func BFSpare(g *Graph, src uint32, procs int) {
 	N := g.Order()
 	vertLevel := make([]uint32, N)
@@ -111,20 +117,23 @@ func BFSpare(g *Graph, src uint32, procs int) {
 	currLevel.Data = append(currLevel.Data, src)
 
 	wait := make(chan struct{})
-	for len(currLevel.Data) > 0 {
+	for len(currLevel.Data) > 0 { // while we have vertices in currentLevel
 
-		async.Spawn(procs, func(i int) {
-			runtime.LockOSThread()
+		async.Spawn(procs, func(i int) { // spawn `procs` goroutines to process vertices in this level,
+			runtime.LockOSThread() // using currLevel as the work queue. Make sure only one goroutine per thread.
 			processLevel(g, currLevel, nextLevel, &visited)
 		}, func() { wait <- struct{}{} })
 
-		<-wait
+		<-wait // this is equivalent to using a WaitGroup but uses a single channel message instead.
 
-		nextLevel.Data = nextLevel.Data[:nextLevel.Head]
-		nextLevel.Head = 0
+		nextLevel.Data = nextLevel.Data[:nextLevel.Head] // "truncate" nextLevel.Data to just the valid data...
+		// ... we need to do this because Frontier.ReadNext uses `len`.
 
 		sentinelCount := uint32(0)
-		async.BlockIter(len(nextLevel.Data), procs, func(low, high int) {
+		// now sort nextLevel by block. After this, all data within a given block will be sorted. This ensures that
+		// "most" data are ordered, which preserves some linearity in cache access, but this might not be significant.
+		// More testing is needed.
+		async.BlockIter(int(nextLevel.Head), procs, func(low, high int) {
 			zuint32.SortBYOB(nextLevel.Data[low:high], currLevel.Data[low:high])
 			for index, v := range nextLevel.Data[low:high] {
 				if v == EmptySentinel {
@@ -139,133 +148,9 @@ func BFSpare(g *Graph, src uint32, procs int) {
 
 		currentLevel++
 		currLevel, nextLevel = nextLevel, currLevel
-		nextLevel.Data = nextLevel.Data[:maxSize:maxSize]
-		nextLevel.Head = 0
-	}
-}
-
-// BFSpare2 computes a vector of levels from src.
-func BFSpare2(g *Graph, src uint32, procs int) {
-	N := g.Order()
-	vertLevel := make([]uint32, N)
-	visited := bitvec.NewBBitVec(N)
-
-	maxSize := N + MaxBlockSize*procs
-	currLevel := &Frontier{make([]uint32, 0, maxSize), 0}
-	nextLevel := &Frontier{make([]uint32, maxSize, maxSize), 0}
-
-	currentLevel := uint32(2)
-	vertLevel[src] = 0
-	visited.TrySet(src)
-
-	currLevel.Data = append(currLevel.Data, src)
-
-	var waitForLast1, waitForLast2 BusyGroup
-	doneProcessingCounter := int32(procs)
-	waitForLast1.Add(1)
-
-	allDone := uint32(0)
-	sentinelCount := uint32(0)
-
-	worker := func(gid int) {
-		runtime.LockOSThread()
-
-		for atomic.LoadUint32(&allDone) == 0 {
-			{
-				// process the current level in parallel
-				processLevel(g, currLevel, nextLevel, &visited)
-			}
-
-			// use a counter to see how many are still processing
-			if atomic.AddInt32(&doneProcessingCounter, -1) == 0 {
-				// the last one updates the data size
-				{
-					nextLevel.Data = nextLevel.Data[:nextLevel.Head]
-					nextLevel.Head = 0
-					atomic.StoreUint32(&sentinelCount, 0)
-				}
-
-				// reset counters
-				atomic.StoreInt32(&doneProcessingCounter, int32(procs))
-				waitForLast2.Add(1)
-				// ... and release the routines
-				waitForLast1.Done()
-			} else {
-				// wait for the last one finishing processing to setup for the next phase
-				waitForLast1.Wait()
-			}
-
-			{
-				// sort a part of the nextLevel in equal chunks
-				blockSize := (len(nextLevel.Data) + procs - 1) / procs
-
-				low := blockSize * gid
-				high := low + blockSize
-				if high > len(nextLevel.Data) {
-					high = len(nextLevel.Data)
-				}
-
-				if low < len(nextLevel.Data) {
-					zuint32.SortBYOB(nextLevel.Data[low:high], currLevel.Data[low:high])
-					// update the vertLevels
-					//    sentinels are sorted to the end of the array,
-					//    so we can break when we find the first one
-					for index, v := range nextLevel.Data[low:high] {
-						if v == EmptySentinel {
-							atomic.AddUint32(&sentinelCount, uint32(high-low-index))
-							break
-						}
-						vertLevel[v] = currentLevel
-					}
-				}
-			}
-
-			// similarly to before, the last one finishing, does the setup for next phase
-			if atomic.AddInt32(&doneProcessingCounter, -1) == 0 {
-				{
-					fmt.Printf("completed level %d, size = %d\n", currentLevel-1, len(nextLevel.Data)-int(sentinelCount))
-
-					currentLevel++
-					currLevel, nextLevel = nextLevel, currLevel
-					nextLevel.Data = nextLevel.Data[:maxSize:maxSize]
-					nextLevel.Head = 0
-
-					// if we are done, set the allDone flag
-					if len(currLevel.Data) == 0 {
-						atomic.StoreUint32(&allDone, 1)
-					}
-				}
-
-				// reset counters
-				atomic.StoreInt32(&doneProcessingCounter, int32(procs))
-				waitForLast1.Add(1)
-				// release the hounds
-				waitForLast2.Done()
-			} else {
-				// wait for the last one to finish
-				waitForLast2.Wait()
-			}
-		}
-	}
-
-	for gid := 1; gid < procs; gid++ {
-		go worker(gid)
-	}
-	worker(0)
-}
-
-type BusyGroup struct{ sema int32 }
-
-func (bg *BusyGroup) Add(v int) { atomic.AddInt32(&bg.sema, int32(v)) }
-func (bg *BusyGroup) Done()     { bg.Add(-1) }
-
-func (bg *BusyGroup) Wait() {
-	for atomic.LoadInt32(&bg.sema) != 0 {
-	}
-}
-
-func (bg *BusyGroup) FairWait() {
-	for atomic.LoadInt32(&bg.sema) != 0 {
-		runtime.Gosched()
+		currLevel.Head = 0 // start reading from 0
+		// reset buffer for next level
+		nextLevel.Data = nextLevel.Data[:maxSize:maxSize] // resize the buffer to `maxSize` elements. We don't care what's in it, because...
+		nextLevel.Head = 0                                // ... we start writing to index 0.
 	}
 }
