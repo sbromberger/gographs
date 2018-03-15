@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	ReadBlockSize  = 256
-	WriteBlockSize = 256
+	ReadBlockSize  = 256 // number of neighbors to process per block
+	WriteBlockSize = 256 // number of empty cells to allocate initially for nextLevel
 	MaxBlockSize   = 256 // max(ReadBlockSize, WriteBlockSize)
 	EmptySentinel  = ^uint32(0)
 )
@@ -24,6 +24,7 @@ type Frontier struct {
 	Head uint32
 }
 
+// NextRead returns the low and high offsets into Frontier for reading ReadBlockSize blocks.
 func (front *Frontier) NextRead() (low, high uint32) {
 	high = atomic.AddUint32(&front.Head, ReadBlockSize)
 	low = high - ReadBlockSize
@@ -33,39 +34,41 @@ func (front *Frontier) NextRead() (low, high uint32) {
 	return
 }
 
+// NextWrite returns the low and high offsets into Frontier for writing WriteBlockSize blocks.
 func (front *Frontier) NextWrite() (low, high uint32) {
-	high = atomic.AddUint32(&front.Head, ReadBlockSize)
-	low = high - ReadBlockSize
+	high = atomic.AddUint32(&front.Head, WriteBlockSize)
+	low = high - WriteBlockSize
 	return
 }
 
+// Write inserts `v` into the next available position in the Frontier, allocating as necessary.
 func (front *Frontier) Write(low, high *uint32, v uint32) {
 	if *low >= *high {
 		*low, *high = front.NextWrite()
 	}
 	front.Data[*low] = v
-	*low += 1
+	*low++
 }
 
 func processLevel(g *Graph, currLevel, nextLevel *Frontier, visited *bitvec.BBitVec) {
 	writeLow, writeHigh := uint32(0), uint32(0)
 	for {
-		readLow, readHigh := currLevel.NextRead()
-		if readLow >= readHigh {
+		readLow, readHigh := currLevel.NextRead() // if currLevel still has vertices to process, get the indices of a ReadBlockSize block of them
+		if readLow >= readHigh {                  // otherwise exit
 			break
 		}
 
-		for _, v := range currLevel.Data[readLow:readHigh] {
-			if v == EmptySentinel {
+		for _, v := range currLevel.Data[readLow:readHigh] { // get and loop through a slice of ReadBlockSize vertices from currLevel
+			if v == EmptySentinel { // if we hit a sentinel within that block, we're done with the block
 				continue
 			}
 
-			neighbors := g.OutNeighbors(v)
+			neighbors := g.OutNeighbors(v) // get the outNeighbors of the vertex under inspection
 			i := 0
-			for ; i < len(neighbors)-3; i += 4 {
+			for ; i < len(neighbors)-3; i += 4 { // unroll loop for visited
 				n1, n2, n3, n4 := neighbors[i], neighbors[i+1], neighbors[i+2], neighbors[i+3]
 				x1, x2, x3, x4 := visited.GetBuckets4(n1, n2, n3, n4)
-				if visited.TrySetWith(x1, n1) {
+				if visited.TrySetWith(x1, n1) { // if not visited, add to the list of vertices for nextLevel
 					nextLevel.Write(&writeLow, &writeHigh, n1)
 				}
 				if visited.TrySetWith(x2, n2) {
@@ -78,7 +81,7 @@ func processLevel(g *Graph, currLevel, nextLevel *Frontier, visited *bitvec.BBit
 					nextLevel.Write(&writeLow, &writeHigh, n4)
 				}
 			}
-			for _, n := range neighbors[i:] {
+			for _, n := range neighbors[i:] { // process any remaining (< 4) neighbors for this vertex
 				if visited.TrySet(n) {
 					nextLevel.Write(&writeLow, &writeHigh, n)
 				}
@@ -86,8 +89,8 @@ func processLevel(g *Graph, currLevel, nextLevel *Frontier, visited *bitvec.BBit
 		}
 	}
 
-	for i := writeLow; i < writeHigh; i += 1 {
-		nextLevel.Data[i] = EmptySentinel
+	for i := writeLow; i < writeHigh; i++ {
+		nextLevel.Data[i] = EmptySentinel // ensure the rest of the nextLevel block is "empty" using the sentinel
 	}
 }
 
