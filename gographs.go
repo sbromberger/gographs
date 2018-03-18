@@ -13,12 +13,14 @@ type Edge struct {
 
 type GoGraph interface {
 	IsDirected() bool
-	HasEdge(u, v int32) bool
+	HasEdge(u, v uint32) bool
 	Fadj() *sparsevecs.UInt32SparseVec
 	Badj() *sparsevecs.UInt32SparseVec
 	// AddEdge(u, v int) err
-	InNeighbors(u int32) []int32
-	OutNeighbors(u int32) []int32
+	// InNeighbors(u uint32) []uint32
+	OutNeighbors(u uint32) []uint32
+	Order() int
+	Size() int
 }
 
 // Graph is a graph structure
@@ -60,9 +62,9 @@ func MakeGraph(r []uint32, c []uint64) Graph {
 }
 
 // HasEdge returns true if an edge exists between u and v.
-func (g *Graph) HasEdge(u, v int) bool {
+func (g *Graph) HasEdge(u, v uint32) bool {
 	f := g.Fadj()
-	return f.GetIndexInt(u, v) || f.GetIndexInt(v, u)
+	return f.GetIndex(u, v) || f.GetIndex(v, u)
 }
 
 func (g *DiGraph) HasEdge(u, v int) bool {
