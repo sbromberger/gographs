@@ -2,3 +2,5 @@
 *.sg
 *.txt
 *.csv
+*.cpp
+.vscode

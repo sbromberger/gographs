@@ -1,55 +1,67 @@
+// Package bitvec is bit-vector with atomic access
 package bitvec
 
-import (
-	"log"
-)
+import "sync/atomic"
 
-// this is the word size of an int(32)
-// in bits. an int(32) requires a min-
-// imum of 4 bytes, each of which are
-// made up of 8 bits, therefore 4x8=32
-// this same notion applies for int(64)
-// such that 8 bytes * 8 bits/byte = 64
-//
 const (
 	nbits = 5
 	ws    = 1 << nbits
 	mask  = ws - 1
 )
 
+// BitVec is a bitvector
 type BitVec []uint32
 
-func NewBitVec(n int) BitVec {
-	sz := 1
-	if n > ws {
-		sz = (n / ws) + 1
-	}
-	log.Printf("Bit vector of base size %d (%d max bits)\n", sz, ws*sz)
-	return make([]uint32, sz, sz)
+// NewBitVec returns a new bitvector with the given size
+func NewBitVec(size int) BitVec {
+	return make(BitVec, uint(size+mask)>>nbits)
 }
 
-func (bv BitVec) offset(k uint32) (bucket, bit uint32) {
+func (BitVec) isBucketBitUnset(bucket uint32, k uint32) bool {
+	return bucket&(1<<(k&mask)) == 0
+}
+
+func (BitVec) offset(k uint32) (bucket, bit uint32) {
 	return k >> nbits, 1 << (k & mask)
+}
+
+func (bv BitVec) GetBucket(k uint32) uint32 {
+	return atomic.LoadUint32(&bv[k>>nbits])
+}
+
+func (bv BitVec) GetBuckets4(a, b, c, d uint32) (x, y, z, w uint32) {
+	x = atomic.LoadUint32(&bv[a>>nbits])
+	y = atomic.LoadUint32(&bv[b>>nbits])
+	z = atomic.LoadUint32(&bv[c>>nbits])
+	w = atomic.LoadUint32(&bv[d>>nbits])
+	return
 }
 
 func (bv BitVec) TrySet(k uint32) bool {
 	bucket, bit := bv.offset(k)
-	unset := bv[bucket]&bit == 0
-	bv[bucket] |= bit
-	return unset
+retry:
+	old := atomic.LoadUint32(&bv[bucket])
+	if old&bit != 0 {
+		return false
+	}
+	if atomic.CompareAndSwapUint32(&bv[bucket], old, old|bit) {
+		return true
+	}
+	goto retry
 }
 
-func (bv BitVec) IsSet(k uint32) bool {
+func (bv BitVec) TrySetWith(old uint32, k uint32) bool {
 	bucket, bit := bv.offset(k)
-	return bv[bucket]&bit != 0
-}
-
-func (bv BitVec) Set(k uint32) {
-	bucket, bit := bv.offset(k)
-	bv[bucket] |= bit
-}
-
-func (bv BitVec) Clear(k uint32) {
-	bucket, bit := bv.offset(k)
-	bv[bucket] &= ^bit
+	if old&bit != 0 {
+		return false
+	}
+retry:
+	if atomic.CompareAndSwapUint32(&bv[bucket], old, old|bit) {
+		return true
+	}
+	old = atomic.LoadUint32(&bv[bucket])
+	if old&bit != 0 {
+		return false
+	}
+	goto retry
 }

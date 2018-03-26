@@ -1,5 +1,3 @@
-// compiled with -gcflags="-B"
-
 package gographs
 
 import (
@@ -56,7 +54,7 @@ func (front *Frontier) Write(low, high *uint32, v uint32) {
 }
 
 // processLevel uses Frontiers to dequeue work from currLevel in ReadBlockSize increments.
-func processLevel(g GoGraph, currLevel, nextLevel *Frontier, visited *bitvec.BBitVec) {
+func processLevel(g GoGraph, currLevel, nextLevel *Frontier, visited *bitvec.BitVec) {
 	writeLow, writeHigh := uint32(0), uint32(0)
 	for {
 		readLow, readHigh := currLevel.NextRead() // if currLevel still has vertices to process, get the indices of a ReadBlockSize block of them
@@ -100,11 +98,11 @@ func processLevel(g GoGraph, currLevel, nextLevel *Frontier, visited *bitvec.BBi
 	}
 }
 
-// BFSpare computes a vector of levels from src in parallel.
-func BFSpare(g GoGraph, src uint32, procs int) {
+// ParallelBFS computes a vector of levels from src in parallel.
+func ParallelBFS(g GoGraph, src uint32, procs int) {
 	N := g.Order()
 	vertLevel := make([]uint32, N)
-	visited := bitvec.NewBBitVec(N)
+	visited := bitvec.NewBitVec(N)
 
 	maxSize := N + MaxBlockSize*procs
 	currLevel := &Frontier{make([]uint32, 0, maxSize), 0}

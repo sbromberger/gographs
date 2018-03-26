@@ -12,6 +12,8 @@ import (
 
 	"github.com/sbromberger/gographs"
 	"github.com/sbromberger/gographs/persistence/raw"
+	"github.com/sbromberger/gographs/persistence/readsg"
+	"github.com/sbromberger/gographs/persistence/readtext"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
@@ -19,6 +21,8 @@ var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 var fn = flag.String("f", "", "filename to open")
 var src = flag.Int("v", 0, "source vertex")
 var procs = flag.Int("procs", 0, "number of procs to use")
+var ff = flag.String("fmt", "t", "file format: (t)ext, (m)map, (s)taticgraph")
+var parallel = flag.Bool("p", false, "run in parallel")
 
 func sum(a []int) int {
 	s := 0
@@ -40,9 +44,20 @@ func main() {
 	fmt.Println("Procs = ", *procs)
 
 	// h := readtext.ReadText(*fn)
-	h := raw.GraphFromRaw(*fn)
+	var h gographs.Graph
+	switch *ff {
+	case "t":
+		h = readtext.ReadText(*fn)
+	case "m":
+		h = raw.GraphFromRaw(*fn)
+	case "s":
+		h = staticgraph.ReadStaticGraph(*fn)
+	default:
+		log.Fatal("Unknown file format (use one of t, m, or s)")
+	}
 	fmt.Println("Order(h) = ", h.Order())
 	fmt.Println("Size(h) = ", h.Size())
+	fmt.Println("Neighbors(1) = ", h.OutNeighbors(1))
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
 		if err != nil {
@@ -60,7 +75,11 @@ func main() {
 	times := make([]time.Duration, 10)
 	for i := range times {
 		start := time.Now()
-		gographs.BFSpare(&h, uint32(*src), *procs)
+		if *parallel {
+			gographs.ParallelBFS(&h, uint32(*src), *procs)
+		} else {
+			gographs.BFS(&h, uint32(*src))
+		}
 		elapsed := time.Since(start)
 		fmt.Print("BFS done: ")
 		fmt.Println(elapsed)

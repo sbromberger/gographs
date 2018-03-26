@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/sbromberger/gographs/bitvec"
+	"github.com/shawnsmithdev/zermelo/zuint32"
 )
 
 // BFS computes a vector of levels from src.
@@ -15,15 +16,14 @@ func BFS(g *Graph, src uint32) {
 	nextLevel := make([]uint32, 0, nv)
 	nLevel := uint32(2)
 	vertLevel[src] = 0
-	visited.Set(src)
+	visited.TrySet(src)
 	curLevel = append(curLevel, src)
 	for len(curLevel) > 0 {
 		for _, v := range curLevel {
 			for _, neighbor := range g.OutNeighbors(v) {
-				if !visited.IsSet(neighbor) {
+				if visited.TrySet(neighbor) {
 					nextLevel = append(nextLevel, neighbor)
 					vertLevel[neighbor] = nLevel
-					visited.Set(neighbor)
 				}
 			}
 		}
@@ -31,6 +31,6 @@ func BFS(g *Graph, src uint32) {
 		nLevel++
 		curLevel = curLevel[:0]
 		curLevel, nextLevel = nextLevel, curLevel
-		// sort.Slice(curLevel, func(i, j int) bool { return curLevel[i] < curLevel[j] })
+		zuint32.SortBYOB(curLevel, nextLevel[:nv])
 	}
 }
