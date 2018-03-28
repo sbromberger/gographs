@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+	
 	g := gographs.HouseGraph()
 	fmt.Println("Order(g) = ", g.Order())
 	fmt.Println("Size(g) = ", g.Size())

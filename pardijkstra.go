@@ -11,7 +11,7 @@ import (
 )
 
 // processDijkstraLevel uses Frontiers to dequeue work from currLevel in ReadBlockSize increments.
-func processDijkstraLevel(g GoGraph, currLevel, nextLevel *Frontier, visited *bitvec.BitVec, dists *[]float32, parents *[]uint32, pathcounts *[]uint32) {
+func processDijkstraLevel(g GoGraph, currLevel, nextLevel *Frontier, visited *bitvec.BitVec, dists []float32, parents []uint32, pathcounts []uint32) {
 	writeLow, writeHigh := uint32(0), uint32(0)
 	for {
 		readLow, readHigh := currLevel.NextRead() // if currLevel still has vertices to process, get the indices of a ReadBlockSize block of them
@@ -23,29 +23,92 @@ func processDijkstraLevel(g GoGraph, currLevel, nextLevel *Frontier, visited *bi
 			if u == EmptySentinel { // if we hit a sentinel within the block, skip it
 				continue
 			}
-
+			alt := min(maxDist, dists[u]+1)
 			vs := g.OutNeighbors(u) // get the outNeighbors of the vertex under inspection
-			i := 0
-			for ; i < len(vs)-3; i += 4 { // unroll loop for visited
-				v1, v2, v3, v4 := vs[i], vs[i+1], vs[i+2], vs[i+3]
-				x1, x2, x3, x4 := visited.GetBuckets4(v1, v2, v3, v4)
-				if visited.TrySetWith(x1, v1) { // if not visited, add to the list of vertices for nextLevel
-					nextLevel.Write(&writeLow, &writeHigh, v1)
-					
-				}
-				if visited.TrySetWith(x2, v2) {
-					nextLevel.Write(&writeLow, &writeHigh, v2)
-				}
-				if visited.TrySetWith(x3, v3) {
-					nextLevel.Write(&writeLow, &writeHigh, v3)
-				}
-				if visited.TrySetWith(x4, v4) {
-					nextLevel.Write(&writeLow, &writeHigh, v4)
-				}
-			}
-			for _, v := range vs[i:] { // process any remaining (< 4) neighbors for this vertex
+			// i := 0
+			for _, v := range vs {
+				// for ; i < len(vs)-3; i += 4 { // unroll loop for visited
+				// 	v1, v2, v3, v4 := vs[i], vs[i+1], vs[i+2], vs[i+3]
+				// 	x1, x2, x3, x4 := visited.GetBuckets4(v1, v2, v3, v4)
+				// 	if visited.TrySetWith(x1, v1) { // if not visited, add to the list of vertices for nextLevel
+				// 		nextLevel.Write(&writeLow, &writeHigh, v1)
+				// 		dists[v1] = alt
+				// 		parents[v1] = u
+				// 		pathcounts[v1] += pathcounts[u]
+				// 	} else {
+				// 		if alt < dists[v1] {
+				// 			dists[v1] = alt
+				// 			parents[v1] = u
+				// 			pathcounts[v1] = 0
+				// 		}
+				// 		if alt == dists[v1] {
+				// 			pathcounts[v1] += pathcounts[u]
+				// 		}
+				// 	}
+				// 	if visited.TrySetWith(x2, v2) {
+				// 		nextLevel.Write(&writeLow, &writeHigh, v2)
+				// 		dists[v2] = alt
+				// 		dists[v2] = alt
+				// 		parents[v2] = u
+				// 		pathcounts[v2] += pathcounts[u]
+				// 	} else {
+				// 		if alt < dists[v2] {
+				// 			dists[v2] = alt
+				// 			parents[v2] = u
+				// 			pathcounts[v2] = 0
+				// 		}
+				// 		if alt == dists[v2] {
+				// 			pathcounts[v2] += pathcounts[u]
+				// 		}
+				// 	}
+				// 	if visited.TrySetWith(x3, v3) {
+				// 		nextLevel.Write(&writeLow, &writeHigh, v3)
+				// 		dists[v3] = alt
+				// 		dists[v3] = alt
+				// 		parents[v3] = u
+				// 		pathcounts[v3] += pathcounts[u]
+				// 	} else {
+				// 		if alt < dists[v3] {
+				// 			dists[v3] = alt
+				// 			parents[v3] = u
+				// 			pathcounts[v3] = 0
+				// 		}
+				// 		if alt == dists[v3] {
+				// 			pathcounts[v3] += pathcounts[u]
+				// 		}
+				// 	}
+				// 	if visited.TrySetWith(x4, v4) {
+				// 		nextLevel.Write(&writeLow, &writeHigh, v4)
+				// 		dists[v4] = alt
+				// 		dists[v4] = alt
+				// 		parents[v4] = u
+				// 		pathcounts[v4] += pathcounts[u]
+				// 	} else {
+				// 		if alt < dists[v4] {
+				// 			dists[v4] = alt
+				// 			parents[v4] = u
+				// 			pathcounts[v4] = 0
+				// 		}
+				// 		if alt == dists[v4] {
+				// 			pathcounts[v4] += pathcounts[u]
+				// 		}
+				// 	}
+				// }
+				// for _, v := range vs[i:] { // process any remaining (< 4) neighbors for this vertex
 				if visited.TrySet(v) {
 					nextLevel.Write(&writeLow, &writeHigh, v)
+					dists[v] = alt
+					parents[v] = u
+					pathcounts[v] += pathcounts[u]
+				} else {
+					if alt < dists[v] {
+						dists[v] = alt
+						parents[v] = u
+						pathcounts[v] = 0
+					}
+					if alt == dists[v] {
+						pathcounts[v] += pathcounts[u]
+					}
 				}
 			}
 		}
@@ -88,7 +151,7 @@ func ParallelDijkstra(g GoGraph, src uint32, procs int) DijkstraState {
 
 		async.Spawn(procs, func(i int) { // spawn `procs` goroutines to process vertices in this level,
 			runtime.LockOSThread() // using currLevel as the work queue. Make sure only one goroutine per thread.
-			processDijkstraLevel(g, currLevel, nextLevel, &visited, &dists, &parents, &pathcounts)
+			processDijkstraLevel(g, currLevel, nextLevel, &visited, dists, parents, pathcounts)
 		}, func() { wait <- struct{}{} })
 
 		<-wait // this is equivalent to using a WaitGroup but uses a single channel message instead.
@@ -120,4 +183,10 @@ func ParallelDijkstra(g GoGraph, src uint32, procs int) DijkstraState {
 		nextLevel.Data = nextLevel.Data[:maxSize:maxSize] // resize the buffer to `maxSize` elements. We don't care what's in it, because...
 		nextLevel.Head = 0                                // ... we start writing to index 0.
 	}
+	ds := DijkstraState{
+		Parents:    parents,
+		Dists:      dists,
+		Pathcounts: pathcounts,
+	}
+	return ds
 }
