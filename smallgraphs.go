@@ -1,0 +1,10 @@
+package gographs
+
+import "github.com/sbromberger/gographs/sparsevecs"
+
+func HouseGraph() Graph {
+	fVec := []uint32{1, 2, 0, 3, 0, 3, 4, 1, 2, 4, 2, 3}
+	fInt := []uint64{0, 2, 4, 7, 10, 12}
+	mx := sparsevecs.UInt32SparseVec{fVec, fInt}
+	return Graph{mx}
+}
