@@ -169,3 +169,8 @@ func (g *Graph) OutNeighbors(v uint32) []uint32 {
 func (g *Graph) OutNeighborsInt(v int) []uint32 {
 	return g.mx.GetRangeInt(v)
 }
+
+// ToSparseVec returns a pointer to the sparsevec from a graph.
+func (g *Graph) ToSparseVec() *sparsevecs.UInt32SparseVec {
+	return &g.mx
+}

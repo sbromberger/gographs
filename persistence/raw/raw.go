@@ -23,7 +23,10 @@ type Raw struct {
 func (raw *Raw) Rowidx() []uint32 { return raw.rowidx }
 func (raw *Raw) Colptr() []uint64 { return raw.colptr }
 
-func SaveRaw(filename string, rowidx []uint32, colptr []uint64) error {
+func SaveRaw(filename string, g gographs.Graph) error {
+	spVecPtr := g.ToSparseVec()
+	rowidx := spVecPtr.Rowidx
+	colptr := spVecPtr.Colptr
 	output, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return err
