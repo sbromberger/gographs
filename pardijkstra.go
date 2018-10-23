@@ -99,7 +99,7 @@ func processDijkstraLevel(g GoGraph, currLevel, nextLevel *Frontier, visited *bi
 					nextLevel.Write(&writeLow, &writeHigh, v)
 					dists[v] = alt
 					parents[v] = u
-					pathcounts[v] += pathcounts[u]
+					atomic.AddUint32(&pathcounts[v], pathcounts[u])
 				} else {
 					if alt < dists[v] {
 						dists[v] = alt
@@ -107,7 +107,7 @@ func processDijkstraLevel(g GoGraph, currLevel, nextLevel *Frontier, visited *bi
 						pathcounts[v] = 0
 					}
 					if alt == dists[v] {
-						pathcounts[v] += pathcounts[u]
+						atomic.AddUint32(&pathcounts[v], pathcounts[u])
 					}
 				}
 			}

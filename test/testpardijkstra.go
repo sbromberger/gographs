@@ -31,6 +31,39 @@ func sum(a []int) int {
 	return s
 }
 
+func sumF32(a []float32) float32 {
+	s := float32(0)
+	for _, r := range a {
+		s += r
+	}
+	return s
+}
+
+func sumU32(a []uint32) uint32 {
+	s := uint32(0)
+	for _, r := range a {
+		s += r
+	}
+	return s
+}
+
+func meanU32(a []uint32) float32 {
+	d := float32(len(a))
+	m := float32(0)
+	for _, r := range a {
+		m += float32(float32(r) / d)
+	}
+	return m
+}
+func mean(a []float32) float32 {
+	d := float32(len(a))
+	m := float32(0)
+	for _, r := range a {
+		m += float32(r / d)
+	}
+	return m
+}
+
 func main() {
 	flag.Parse()
 
@@ -68,18 +101,21 @@ func main() {
 	}
 
 	times := make([]time.Duration, 10)
-	// var d gographs.DijkstraState
+	var d gographs.DijkstraState
 	for i := range times {
 		start := time.Now()
 		if *parallel {
-			gographs.ParallelDijkstra(&h, uint32(*src), *procs)
+			d = gographs.ParallelDijkstra(&h, uint32(*src), *procs)
 		} else {
-			gographs.Dijkstra(&h, uint32(*src), false)
+			d = gographs.Dijkstra(&h, uint32(*src), false)
 		}
 		elapsed := time.Since(start)
 		fmt.Print("Dijkstra done: ")
 		fmt.Println(elapsed)
 		times[i] = elapsed
+		fmt.Println("mean(d.dists) = ", mean(d.Dists))
+		fmt.Println("sum(d.pathcounts) = ", sumU32(d.Pathcounts))
+		fmt.Println("sum(d.parents) = ", sumU32(d.Parents))
 	}
 	sumTime := time.Duration(0)
 	for i := range times {

@@ -13,6 +13,7 @@ func ReadText(fn string) gographs.Graph {
 	var fInd []uint64
 	var fVec []uint32
 	f, err := os.Open(fn)
+	defer f.Close()
 	if err != nil {
 		log.Fatal("Cannot open file: ", err)
 	}

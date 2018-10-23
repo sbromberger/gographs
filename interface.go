@@ -6,11 +6,39 @@ import (
 	"github.com/sbromberger/gographs/sparsevecs"
 )
 
+// Edge is a graph edge.
 type Edge struct {
-	src uint32
-	dst uint32
+	Src uint32
+	Dst uint32
 }
 
+// Reverse an edge
+func Reverse(e Edge) Edge {
+	return Edge{e.Dst, e.Src}
+}
+
+// EdgeList is a slice of edges
+type EdgeList []Edge
+
+func (e EdgeList) Len() int {
+	return len(e)
+}
+
+func (e EdgeList) Swap(i, j int) {
+	e[i], e[j] = e[j], e[i]
+}
+
+func (e EdgeList) Less(i, j int) bool {
+	if e[i].Src < e[j].Src {
+		return true
+	}
+	if e[i].Src > e[j].Src {
+		return false
+	}
+	return e[i].Dst < e[j].Dst
+}
+
+// GoGraph is an interface to Graphs and DiGraphs.
 type GoGraph interface {
 	IsDirected() bool
 	HasEdge(u, v uint32) bool
@@ -28,30 +56,37 @@ type Graph struct {
 	mx sparsevecs.UInt32SparseVec
 }
 
+// DiGraph is a directed Graph.
 type DiGraph struct {
 	fmx, bmx sparsevecs.UInt32SparseVec
 }
 
+// Fadj returns a pointer to the forward adjacencies.
 func (g *Graph) Fadj() *sparsevecs.UInt32SparseVec {
 	return &g.mx
 }
 
+// Badj returns a ptr to the backward adjacencies.
 func (g *Graph) Badj() *sparsevecs.UInt32SparseVec {
 	return &g.mx
 }
 
+// Fadj returns a pointer to the forward adjacencies.
 func (g *DiGraph) Fadj() *sparsevecs.UInt32SparseVec {
 	return &g.fmx
 }
 
+// Badj returns a ptr to the backward adjacencies.
 func (g *DiGraph) Badj() *sparsevecs.UInt32SparseVec {
 	return &g.bmx
 }
 
+// IsDirected is true if the graph is directed.
 func (g *Graph) IsDirected() bool {
 	return false
 }
 
+// IsDirected is true if the graph is directed.
 func (g DiGraph) IsDirected() bool {
 	return true
 }
@@ -67,6 +102,7 @@ func (g *Graph) HasEdge(u, v uint32) bool {
 	return f.GetIndex(u, v) || f.GetIndex(v, u)
 }
 
+// HasEdge returns true if an edge exists between u and v.
 func (g *DiGraph) HasEdge(u, v int) bool {
 	f := g.Fadj()
 	b := g.Badj()
@@ -83,6 +119,7 @@ func (g *Graph) Size() int {
 	return len(g.mx.Rowidx) / 2
 }
 
+// Size returns the number of edges
 func (g DiGraph) Size() int {
 	return len(g.fmx.Rowidx)
 }

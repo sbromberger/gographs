@@ -11,12 +11,17 @@ import (
 )
 
 const (
-	ReadBlockSize  = 256 // number of neighbors to process per block
-	WriteBlockSize = 256 // number of empty cells to allocate initially for nextLevel
-	MaxBlockSize   = 256 // max(ReadBlockSize, WriteBlockSize)
-	EmptySentinel  = ^uint32(0)
+	// ReadBlockSize : the number of neighbors to process per block
+	ReadBlockSize = 256
+	// WriteBlockSize : number of empty cells to allocate initially for nextLevel
+	WriteBlockSize = 256
+	// MaxBlockSize : max(ReadBlockSize, WriteBlockSize)
+	MaxBlockSize = 256
+	// EmptySentinel : all ones.
+	EmptySentinel = ^uint32(0)
 )
 
+// Frontier is
 type Frontier struct {
 	Data []uint32 // the vector of data
 	Head uint32   // the index to the next unused element in the vector
