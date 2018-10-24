@@ -11,7 +11,7 @@ import (
 )
 
 // processDijkstraLevel uses Frontiers to dequeue work from currLevel in ReadBlockSize increments.
-func processDijkstraLevel(g GoGraph, currLevel, nextLevel *Frontier, visited *bitvec.BitVec, dists []float32, parents []uint32, pathcounts []uint32) {
+func processDijkstraLevel(g GoGraph, currLevel, nextLevel *Frontier, visited *bitvec.ABitVec, dists []float32, parents []uint32, pathcounts []uint32) {
 	writeLow, writeHigh := uint32(0), uint32(0)
 	for {
 		readLow, readHigh := currLevel.NextRead() // if currLevel still has vertices to process, get the indices of a ReadBlockSize block of them
@@ -123,7 +123,7 @@ func processDijkstraLevel(g GoGraph, currLevel, nextLevel *Frontier, visited *bi
 func ParallelDijkstra(g GoGraph, src uint32, procs int) DijkstraState {
 	N := g.Order()
 	vertLevel := make([]uint32, N)
-	visited := bitvec.NewBitVec(N)
+	visited := bitvec.NewABitVec(N)
 
 	maxSize := N + MaxBlockSize*procs
 	currLevel := &Frontier{make([]uint32, 0, maxSize), 0}
