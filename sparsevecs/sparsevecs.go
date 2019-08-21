@@ -46,6 +46,7 @@ func (v UInt32SparseVec) GetIndex(r, c uint32) bool {
 	return found
 }
 
+// GetIndexInt returns true if the value at (r, c) is defined.
 func (v UInt32SparseVec) GetIndexInt(x, y int) bool {
 	return v.GetIndex(uint32(x), uint32(y))
 }
