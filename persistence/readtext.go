@@ -1,4 +1,4 @@
-package readtext
+package persistence
 
 import (
 	"bufio"

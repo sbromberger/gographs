@@ -1,4 +1,4 @@
-package staticgraph
+package persistence
 
 import (
 	"log"

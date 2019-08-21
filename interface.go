@@ -93,7 +93,7 @@ func (g DiGraph) IsDirected() bool {
 
 // MakeGraph creates an undirected graph from rowidx and colptr vectors.
 func MakeGraph(r []uint32, c []uint64) Graph {
-	return Graph{sparsevecs.UInt32SparseVec{r, c}}
+	return Graph{sparsevecs.UInt32SparseVec{Rowidx: r, Colptr: c}}
 }
 
 // HasEdge returns true if an edge exists between u and v.

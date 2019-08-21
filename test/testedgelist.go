@@ -5,12 +5,11 @@ import (
 	"os"
 
 	"github.com/sbromberger/gographs"
-	"github.com/sbromberger/gographs/persistence/edgelist"
 )
 
 func main() {
 	fn := os.Args[1]
-	edgelist.GraphFromEdgeList(fn)
+	persistene.GraphFromEdgeList(fn)
 	h := gographs.HouseGraph()
 	fmt.Println("h.Fadj = ", h.Fadj())
 

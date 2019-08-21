@@ -1,4 +1,4 @@
-package lgformat
+package persistence
 
 import (
 	"bufio"
@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/sbromberger/gographs"
-	"github.com/sbromberger/gographs/persistence/edgelist"
 )
 
 // GraphFromLG reads a graph from lightgraphs format. Ignores header.
@@ -20,7 +19,7 @@ func GraphFromLG(fn string) gographs.Graph {
 	scanner := bufio.NewScanner(f)
 	scanner.Scan() // read header
 
-	edges := edgelist.ReadEdgeList(scanner, 1)
+	edges := ReadEdgeList(scanner, 1)
 	rowval := make([]uint32, len(edges))
 	colptr := make([]uint64, 0)
 	currsrc := uint32(0)

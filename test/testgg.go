@@ -27,6 +27,7 @@ func sum(a []int) int {
 }
 
 func main() {
+	ggg := 94
 	flag.Parse()
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
@@ -65,18 +66,18 @@ func main() {
 	fmt.Println("Order(h) = ", h.Order())
 	fmt.Println("Size(h) = ", h.Size())
 	start := time.Now()
-	gographs.DijkstraShortestPaths(&h, 0)
+	gographs.Dijkstra(&h, 0)
 	elapsed := time.Since(start)
 	fmt.Println("dijkstra done:")
 	fmt.Println(elapsed)
 
-	fmt.Println("doing all dijkstras")
-	start = time.Now()
-	ds := gographs.AllDijkstraShortestPaths(&h)
-	elapsed = time.Since(start)
-	fmt.Println("elapsed = ", elapsed)
-	fmt.Println("len(ds) = ", len(ds))
-	// fmt.Println("len(ds[5999].Dists) = ", len(ds[5999].Dists))
+	// fmt.Println("doing all dijkstras")
+	// start = time.Now()
+	// ds := gographs.AllDijkstraShortestPaths(&h)
+	// elapsed = time.Since(start)
+	// fmt.Println("elapsed = ", elapsed)
+	// fmt.Println("len(ds) = ", len(ds))
+	// // fmt.Println("len(ds[5999].Dists) = ", len(ds[5999].Dists))
 	if *memprofile != "" {
 		f, err := os.Create(*memprofile)
 		if err != nil {

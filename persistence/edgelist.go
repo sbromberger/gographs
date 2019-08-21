@@ -1,4 +1,4 @@
-package edgelist
+package persistence
 
 import (
 	"bufio"
