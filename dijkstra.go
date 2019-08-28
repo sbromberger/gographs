@@ -1,10 +1,9 @@
-package gographs
+package graph
 
 import (
 	"fmt"
 	"math"
 
-	"github.com/sbromberger/gographs/bitvec"
 	"github.com/shawnsmithdev/zermelo/zuint32"
 )
 
@@ -35,10 +34,12 @@ func min(a, b float32) float32 {
 const maxDist = float32(math.MaxFloat32 - 1)
 
 // Dijkstra returns a DijkstraState.
-func Dijkstra(g *Graph, src uint32, withPreds bool) DijkstraState {
-	nv := g.Order()
+func Dijkstra(g Graph, src uint32, weightFn func(uint32, uint32) float32, withPreds bool) DijkstraState {
+	nv := g.NumVertices()
 	vertLevel := make([]uint32, nv)
-	visited := bitvec.NewBitVec(nv)
+	for i := uint32(0); i < nv; i++ {
+		vertLevel[i] = unvisited
+	}
 	curLevel := make([]uint32, 0, nv)
 	nextLevel := make([]uint32, 0, nv)
 	nLevel := uint32(2)
@@ -59,13 +60,12 @@ func Dijkstra(g *Graph, src uint32, withPreds bool) DijkstraState {
 	dists[src] = 0
 	parents[src] = src
 	pathcounts[src] = 1
-	visited.TrySet(src)
 	curLevel = append(curLevel, src)
 	for len(curLevel) > 0 {
 		for _, u := range curLevel {
-			alt := min(maxDist, dists[u]+1)
 			for _, v := range g.OutNeighbors(u) {
-				if visited.TrySet(v) { // if not visited
+				alt := min(maxDist, dists[u]+weightFn(u, v))
+				if vertLevel[v] == unvisited { // if not visited
 					dists[v] = alt
 					parents[v] = u
 					pathcounts[v] += pathcounts[u]

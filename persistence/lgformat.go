@@ -2,39 +2,26 @@ package persistence
 
 import (
 	"bufio"
-	"log"
+	"fmt"
 	"os"
 
-	"github.com/sbromberger/gographs"
+	"github.com/sbromberger/graph"
 )
 
 // GraphFromLG reads a graph from lightgraphs format. Ignores header.
-func GraphFromLG(fn string) gographs.Graph {
+func GraphFromLG(fn string) (graph.Graph, error) {
 	f, err := os.OpenFile(fn, os.O_RDONLY, 0644)
 	defer f.Close()
 	if err != nil {
-		log.Fatal("Open failed: ", err)
+		return graph.Graph{}, fmt.Errorf("Open failed: %v", err)
 	}
 
 	scanner := bufio.NewScanner(f)
 	scanner.Scan() // read header
 
-	edges := ReadEdgeList(scanner, 1)
-	rowval := make([]uint32, len(edges))
-	colptr := make([]uint64, 0)
-	currsrc := uint32(0)
-
-	for i, e := range edges {
-		src := e.Src
-		for currsrc <= src {
-			colptr = append(colptr, uint64(i))
-			currsrc++
-		}
-
-		rowval[i] = e.Dst
+	ss, ds, err := readEdgeList(scanner, 1)  // offset is 1 because Julia is 1-indexed
+	if err != nil {
+		return graph.Graph{}, err
 	}
-	colptr = append(colptr, uint64(len(rowval)))
-	// fmt.Println("rowval = ", rowval)
-	// fmt.Println("colptr = ", colptr)
-	return gographs.MakeGraph(rowval, colptr)
+	return graph.New(ss, ds)
 }

@@ -1,11 +1,11 @@
-package gographs
+package graph
 
 import (
 	"runtime"
 	"sync/atomic"
 
 	"github.com/egonelbre/async"
-	"github.com/sbromberger/gographs/bitvec"
+	"github.com/sbromberger/bitvec"
 	"github.com/shawnsmithdev/zermelo/zuint32"
 )
 
@@ -58,7 +58,7 @@ func (front *Frontier) Write(low, high *uint32, v uint32) {
 }
 
 // processLevel uses Frontiers to dequeue work from currLevel in ReadBlockSize increments.
-func processLevel(g GoGraph, currLevel, nextLevel *Frontier, visited *bitvec.ABitVec) {
+func processLevel(g Graph, currLevel, nextLevel *Frontier, visited *bitvec.ABitVec) {
 	writeLow, writeHigh := uint32(0), uint32(0)
 	for {
 		readLow, readHigh := currLevel.NextRead() // if currLevel still has vertices to process, get the indices of a ReadBlockSize block of them
@@ -103,12 +103,12 @@ func processLevel(g GoGraph, currLevel, nextLevel *Frontier, visited *bitvec.ABi
 }
 
 // ParallelBFS computes a vector of levels from src in parallel.
-func ParallelBFS(g GoGraph, src uint32, procs int) {
-	N := g.Order()
+func ParallelBFS(g Graph, src uint32, procs int) {
+	N := g.NumVertices()
 	vertLevel := make([]uint32, N)
 	visited := bitvec.NewABitVec(N)
 
-	maxSize := N + MaxBlockSize*procs
+	maxSize := N + (MaxBlockSize * uint32(procs))
 	currLevel := &Frontier{make([]uint32, 0, maxSize), 0}
 	nextLevel := &Frontier{make([]uint32, maxSize, maxSize), 0}
 

@@ -1,45 +1,52 @@
 package persistence
 
 import (
-	"log"
 	"os"
 	"unsafe"
 
 	mmap "github.com/edsrzf/mmap-go"
-	"github.com/sbromberger/gographs"
+	"github.com/sbromberger/graph"
 )
 
 type Raw struct {
 	file *os.File
 	data mmap.MMap
 
-	rowidxlen uint64
-	colptrlen uint64
+	FIndicesLen uint64
+	FIndPtrLen  uint64
+	BIndicesLen uint64
+	BIndPtrLen  uint64
 
-	rowidx []uint32
-	colptr []uint64
+	FIndPtr  []uint64
+	FIndices []uint32
+
+	BIndPtr  []uint64
+	BIndices []uint32
 }
 
-func (raw *Raw) Rowidx() []uint32 { return raw.rowidx }
-func (raw *Raw) Colptr() []uint64 { return raw.colptr }
+func SaveRaw(filename string, g graph.Graph) error {
+	FIndPtr := g.FMat().IndPtr
+	FIndices := g.FMat().Indices
+	BIndPtr := g.BMat().IndPtr
+	BIndices := g.BMat().Indices
 
-func SaveRaw(filename string, g gographs.Graph) error {
-	spVecPtr := g.ToSparseVec()
-	rowidx := spVecPtr.Rowidx
-	colptr := spVecPtr.Colptr
 	output, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
 	defer output.Close()
 
-	rowidxlen := int64(len(rowidx))
-	colptrlen := int64(len(colptr))
+	FIndPtrLen := int64(len(FIndPtr))
+	FIndicesLen := int64(len(FIndices))
+	BIndPtrLen := int64(len(BIndPtr))
+	BIndicesLen := int64(len(BIndices))
 
-	rowidxbytes := 4 * len(rowidx)
-	colptrbytes := 8 * len(colptr)
+	FIndPtrBytes := 8 * len(FIndPtr)
+	FIndicesBytes := 4 * len(FIndices)
+	BIndPtrBytes := 8 * len(BIndPtr)
+	BIndicesBytes := 4 * len(BIndices)
 
-	err = output.Truncate(int64(8 + 8 + rowidxbytes + colptrbytes))
+	err = output.Truncate(int64(8 + 8 + 8 + 8 + FIndPtrBytes + FIndicesBytes + BIndPtrBytes + BIndicesBytes))
 	if err != nil {
 		return err
 	}
@@ -52,22 +59,36 @@ func SaveRaw(filename string, g gographs.Graph) error {
 
 	x := 0
 
-	copy(data[x:x+8], ((*[8]byte)(unsafe.Pointer(&rowidxlen))[:]))
+	copy(data[x:x+8], ((*[8]byte)(unsafe.Pointer(&FIndPtrLen))[:]))
+	x += 8
+	copy(data[x:x+8], ((*[8]byte)(unsafe.Pointer(&FIndicesLen))[:]))
 	x += 8
 
-	copy(data[x:x+8], ((*[8]byte)(unsafe.Pointer(&colptrlen))[:]))
+	copy(data[x:x+8], ((*[8]byte)(unsafe.Pointer(&BIndPtrLen))[:]))
+	x += 8
+	copy(data[x:x+8], ((*[8]byte)(unsafe.Pointer(&BIndicesLen))[:]))
 	x += 8
 
-	if len(rowidx) > 0 {
-		copy(data[x:x+rowidxbytes],
-			((*[1 << 40]byte)(unsafe.Pointer(&rowidx[0]))[:rowidxbytes]))
-		x += rowidxbytes
+	if len(FIndPtr) > 0 {
+		copy(data[x:x+FIndPtrBytes],
+			((*[1 << 40]byte)(unsafe.Pointer(&FIndPtr[0]))[:FIndPtrBytes]))
+		x += FIndPtrBytes
+	}
+	if len(FIndices) > 0 {
+		copy(data[x:x+FIndicesBytes],
+			((*[1 << 40]byte)(unsafe.Pointer(&FIndices[0]))[:FIndicesBytes]))
+		x += FIndicesBytes
 	}
 
-	if len(colptr) > 0 {
-		copy(data[x:x+colptrbytes],
-			((*[1 << 40]byte)(unsafe.Pointer(&colptr[0]))[:colptrbytes]))
-		x += colptrbytes
+	if len(FIndPtr) > 0 {
+		copy(data[x:x+BIndPtrBytes],
+			((*[1 << 40]byte)(unsafe.Pointer(&BIndPtr[0]))[:BIndPtrBytes]))
+		x += BIndPtrBytes
+	}
+	if len(BIndices) > 0 {
+		copy(data[x:x+BIndicesBytes],
+			((*[1 << 40]byte)(unsafe.Pointer(&BIndices[0]))[:BIndicesBytes]))
+		x += BIndicesBytes
 	}
 
 	return nil
@@ -90,31 +111,43 @@ func LoadRaw(filename string) (*Raw, error) {
 	}
 
 	x := 0
-	copy((*[8]byte)(unsafe.Pointer(&raw.rowidxlen))[:], raw.data[x:x+8])
+	copy((*[8]byte)(unsafe.Pointer(&raw.FIndPtrLen))[:], raw.data[x:x+8])
+	x += 8
+	copy((*[8]byte)(unsafe.Pointer(&raw.FIndicesLen))[:], raw.data[x:x+8])
 	x += 8
 
-	copy((*[8]byte)(unsafe.Pointer(&raw.colptrlen))[:], raw.data[x:x+8])
+	copy((*[8]byte)(unsafe.Pointer(&raw.BIndPtrLen))[:], raw.data[x:x+8])
+	x += 8
+	copy((*[8]byte)(unsafe.Pointer(&raw.BIndicesLen))[:], raw.data[x:x+8])
 	x += 8
 
-	raw.rowidx = ((*[1 << 40]uint32)(unsafe.Pointer(&raw.data[x])))[0:int(raw.rowidxlen)]
-	x += 4 * int(raw.rowidxlen)
+	raw.FIndPtr = ((*[1 << 40]uint64)(unsafe.Pointer(&raw.data[x])))[0:int(raw.FIndPtrLen)]
+	x += 8 * int(raw.FIndPtrLen)
+	raw.FIndices = ((*[1 << 40]uint32)(unsafe.Pointer(&raw.data[x])))[0:int(raw.FIndicesLen)]
+	x += 4 * int(raw.FIndicesLen)
 
-	raw.colptr = ((*[1 << 40]uint64)(unsafe.Pointer(&raw.data[x])))[0:int(raw.colptrlen)]
+	raw.BIndPtr = ((*[1 << 40]uint64)(unsafe.Pointer(&raw.data[x])))[0:int(raw.BIndPtrLen)]
+	x += 8 * int(raw.BIndPtrLen)
+	raw.BIndices = ((*[1 << 40]uint32)(unsafe.Pointer(&raw.data[x])))[0:int(raw.BIndicesLen)]
 
 	return raw, nil
 }
 
-func GraphFromRaw(fn string) gographs.Graph {
+func ReadRaw(fn string) (graph.Graph, error) {
 	raw, err := LoadRaw(fn)
 	if err != nil {
-		log.Fatal("error: ", err)
+		return graph.Graph{}, err
 	}
 
-	ri := make([]uint32, raw.rowidxlen)
-	cp := make([]uint64, raw.colptrlen)
-	copy(ri, raw.rowidx)
-	copy(cp, raw.colptr)
-	return gographs.MakeGraph(ri, cp)
+	find := make([]uint32, raw.FIndicesLen)
+	findptr := make([]uint64, raw.FIndPtrLen)
+	bind := make([]uint32, raw.BIndicesLen)
+	bindptr := make([]uint64, raw.BIndPtrLen)
+	copy(find, raw.FIndices)
+	copy(findptr, raw.FIndPtr)
+	copy(bind, raw.BIndices)
+	copy(bindptr, raw.BIndPtr)
+	return graph.FromRaw(findptr, find, bindptr, bind)
 }
 
 func (raw *Raw) Close() error {

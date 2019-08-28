@@ -1,4 +1,4 @@
-package gographs
+package graph
 
 import (
 	"fmt"
@@ -6,12 +6,12 @@ import (
 	"sync/atomic"
 
 	"github.com/egonelbre/async"
-	"github.com/sbromberger/gographs/bitvec"
+	"github.com/sbromberger/bitvec"
 	"github.com/shawnsmithdev/zermelo/zuint32"
 )
 
 // processDijkstraLevel uses Frontiers to dequeue work from currLevel in ReadBlockSize increments.
-func processDijkstraLevel(g GoGraph, currLevel, nextLevel *Frontier, visited *bitvec.ABitVec, dists []float32, parents []uint32, pathcounts []uint32) {
+func processDijkstraLevel(g Graph, currLevel, nextLevel *Frontier, visited *bitvec.ABitVec, dists []float32, parents []uint32, pathcounts []uint32) {
 	writeLow, writeHigh := uint32(0), uint32(0)
 	for {
 		readLow, readHigh := currLevel.NextRead() // if currLevel still has vertices to process, get the indices of a ReadBlockSize block of them
@@ -120,12 +120,12 @@ func processDijkstraLevel(g GoGraph, currLevel, nextLevel *Frontier, visited *bi
 }
 
 // ParallelDijkstra computes a vector of levels from src in parallel.
-func ParallelDijkstra(g GoGraph, src uint32, procs int) DijkstraState {
-	N := g.Order()
+func ParallelDijkstra(g Graph, src uint32, procs int) DijkstraState {
+	N := g.NumVertices()
 	vertLevel := make([]uint32, N)
 	visited := bitvec.NewABitVec(N)
 
-	maxSize := N + MaxBlockSize*procs
+	maxSize := N + MaxBlockSize*uint32(procs)
 	currLevel := &Frontier{make([]uint32, 0, maxSize), 0}
 	nextLevel := &Frontier{make([]uint32, maxSize, maxSize), 0}
 
