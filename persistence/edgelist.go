@@ -12,8 +12,8 @@ import (
 
 func readEdgeList(scanner *bufio.Scanner, offset uint32) ([]uint32, []uint32, error) {
 	var l string
-	ss := make([]uint32, 100)
-	ds := make([]uint32, 100)
+	ss := make([]uint32, 0, 100)
+	ds := make([]uint32, 0, 100)
 	for scanner.Scan() {
 		l = scanner.Text()
 		pieces := strings.Split(l, ",")
@@ -31,7 +31,7 @@ func readEdgeList(scanner *bufio.Scanner, offset uint32) ([]uint32, []uint32, er
 		u := uint32(u64) - offset
 		v := uint32(v64) - offset
 		ss = append(ss, u)
-		ds = append(ss, v)
+		ds = append(ds, v)
 	}
 	if err := scanner.Err(); err != nil {
 		return []uint32{}, []uint32{}, fmt.Errorf("Other error: %v", err)

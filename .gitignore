@@ -3,4 +3,6 @@
 *.txt
 *.csv
 *.cpp
+*.lg
+*.raw
 .vscode

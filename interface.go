@@ -1,6 +1,8 @@
 package graph
 
 import (
+	"fmt"
+
 	"github.com/sbromberger/graphmatrix"
 )
 
@@ -48,6 +50,10 @@ func (it EdgeIter) Next() (e Edge, done bool) {
 // Graph is a graph structure representing an undirected graph.
 type Graph struct {
 	fmx, bmx graphmatrix.GraphMatrix
+}
+
+func (g Graph) String() string {
+	return fmt.Sprintf("(%d, %d) graph", g.NumVertices(), g.NumEdges())
 }
 
 // MakeGraph creates an undirected graph from vectors of source and dest vertices.
