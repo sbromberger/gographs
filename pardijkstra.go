@@ -12,7 +12,7 @@ import (
 
 // processDijkstraLevel uses Frontiers to dequeue work from currLevel in ReadBlockSize increments.
 func processDijkstraLevel(g Graph, currLevel, nextLevel *Frontier, visited *bitvec.ABitVec, dists []float32, parents []uint32, pathcounts []uint32) {
-	writeLow, writeHigh := uint32(0), uint32(0)
+	writeLow, writeHigh := u0, u0
 	for {
 		readLow, readHigh := currLevel.NextRead() // if currLevel still has vertices to process, get the indices of a ReadBlockSize block of them
 		if readLow >= readHigh {                  // otherwise exit
@@ -127,7 +127,7 @@ func ParallelDijkstra(g Graph, src uint32, procs int) DijkstraState {
 
 	maxSize := N + MaxBlockSize*uint32(procs)
 	currLevel := &Frontier{make([]uint32, 0, maxSize), 0}
-	nextLevel := &Frontier{make([]uint32, maxSize, maxSize), 0}
+	nextLevel := &Frontier{make([]uint32, maxSize), 0}
 
 	currentLevel := uint32(2)
 	parents := make([]uint32, N)
@@ -159,7 +159,7 @@ func ParallelDijkstra(g Graph, src uint32, procs int) DijkstraState {
 		nextLevel.Data = nextLevel.Data[:nextLevel.Head] // "truncate" nextLevel.Data to just the valid data...
 		// ... we need to do this because Frontier.ReadNext uses `len`.
 
-		sentinelCount := uint32(0)
+		sentinelCount := u0
 		// now sort nextLevel by block. After this, all data within a given block will be sorted. This ensures that
 		// "most" data are ordered, which preserves some linearity in cache access, but this might not be significant.
 		// More testing is needed.

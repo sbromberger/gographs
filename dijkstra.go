@@ -2,7 +2,6 @@ package graph
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/shawnsmithdev/zermelo/zuint32"
 )
@@ -31,13 +30,11 @@ func min(a, b float32) float32 {
 	return b
 }
 
-const maxDist = float32(math.MaxFloat32 - 1)
-
 // Dijkstra returns a DijkstraState.
 func Dijkstra(g Graph, src uint32, weightFn func(uint32, uint32) float32, withPreds bool) DijkstraState {
 	nv := g.NumVertices()
 	vertLevel := make([]uint32, nv)
-	for i := uint32(0); i < nv; i++ {
+	for i := u0; i < nv; i++ {
 		vertLevel[i] = unvisited
 	}
 	curLevel := make([]uint32, 0, nv)

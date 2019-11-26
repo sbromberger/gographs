@@ -1,5 +1,7 @@
 package graph
 
+import "errors"
+
 // HouseGraph returns an undirected house graph.
 func HouseGraph() SimpleGraph {
 	ss := []uint32{1, 1, 2, 3, 3, 4}
@@ -11,7 +13,7 @@ func HouseGraph() SimpleGraph {
 func PathGraph(n int) (SimpleGraph, error) {
 	ss := make([]uint32, n-1)
 	sd := make([]uint32, n-1)
-	for i := uint32(0); i < uint32(n-1); i++ {
+	for i := u0; i < uint32(n-1); i++ {
 		ss[i] = i
 		sd[i] = i + 1
 	}
@@ -21,7 +23,7 @@ func PathGraph(n int) (SimpleGraph, error) {
 func CycleGraph(n int) (SimpleGraph, error) {
 	ss := make([]uint32, n)
 	sd := make([]uint32, n)
-	for i := uint32(0); i < uint32(n-1); i++ {
+	for i := u0; i < uint32(n-1); i++ {
 		ss[i] = i
 		sd[i] = i + 1
 	}
@@ -32,10 +34,13 @@ func CycleGraph(n int) (SimpleGraph, error) {
 }
 
 func WheelGraph(n int) (SimpleGraph, error) {
+	if n < 3 {
+		return SimpleGraph{}, errors.New("WheelGraph must have at least 3 vertices")
+	}
 	ss := make([]uint32, 2*(n-1))
 	sd := make([]uint32, 2*(n-1))
 	n32 := uint32(n)
-	for i := uint32(0); i < uint32(n-1); i++ {
+	for i := u0; i < uint32(n-1); i++ {
 		ss[i] = 0
 		sd[i] = i + 1
 		if i == 0 {

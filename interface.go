@@ -1,5 +1,7 @@
 package graph
 
+// This file contains interface definitions for Graph and Edge types.
+
 import (
 	"github.com/sbromberger/graphmatrix"
 )
@@ -11,12 +13,6 @@ type Edge interface {
 	Dst() uint32
 	// Weight returns the weight of the edge
 	Weight() float64
-}
-
-// Edge is a graph edge.
-type SimpleEdge struct {
-	src uint32
-	dst uint32
 }
 
 // EdgeList is a slice of edges
