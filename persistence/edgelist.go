@@ -42,10 +42,10 @@ func readEdgeList(scanner *bufio.Scanner, offset uint32) ([]uint32, []uint32, er
 // ReadEdgeList returns a graph from an edgelist.
 func ReadEdgeList(fn string) (graph.Graph, error) {
 	f, err := os.OpenFile(fn, os.O_RDONLY, 0644)
-	defer f.Close()
 	if err != nil {
 		return graph.Graph{}, err
 	}
+	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
 	ss, ds, err := readEdgeList(scanner, 0)
