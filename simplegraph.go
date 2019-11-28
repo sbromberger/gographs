@@ -58,10 +58,16 @@ func (g SimpleGraph) OutDegree(u uint32) uint32 { return uint32(len(g.OutNeighbo
 func (g SimpleGraph) InDegree(u uint32) uint32 { return uint32(len(g.InNeighbors(u))) }
 
 // OutNeighbors returns the out neighbors of vertex u.
-func (g SimpleGraph) OutNeighbors(u uint32) []uint32 { return g.fmx.GetRow(u) }
+func (g SimpleGraph) OutNeighbors(u uint32) []uint32 {
+	r, _ := g.fmx.GetRow(u)
+	return r
+}
 
 // InNeighbors returns the in neighbors of vertex u.
-func (g SimpleGraph) InNeighbors(u uint32) []uint32 { return g.bmx.GetRow(u) }
+func (g SimpleGraph) InNeighbors(u uint32) []uint32 {
+	r, _ := g.bmx.GetRow(u)
+	return r
+}
 
 // HasEdge returns true if an edge exists between u and v.
 func (g SimpleGraph) HasEdge(u, v uint32) bool {
@@ -101,7 +107,7 @@ func (g SimpleGraph) NumVertices() uint32 {
 
 // Edges returns an iterator of edges
 func (g SimpleGraph) Edges() EdgeIter {
-	return EdgeIter{mxiter: g.fmx.NewNZIter()}
+	return &SimpleEdgeIter{mxiter: g.fmx.NewNZIter()}
 }
 
 // FMat returns the forward matrix of the graph.
@@ -113,6 +119,8 @@ func (g SimpleGraph) FMat() graphmatrix.GraphMatrix {
 func (g SimpleGraph) BMat() graphmatrix.GraphMatrix {
 	return g.bmx
 }
+
+func (g SimpleGraph) IsDirected() bool { return false }
 
 func FromRaw(findptr []uint64, find []uint32, bindptr []uint64, bind []uint32) (SimpleGraph, error) {
 	fmx := graphmatrix.GraphMatrix{IndPtr: findptr, Indices: find}

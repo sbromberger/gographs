@@ -1,14 +1,14 @@
-package persistence
+package graph
 
 import (
 	"os"
 	"unsafe"
 
 	mmap "github.com/edsrzf/mmap-go"
-	"github.com/sbromberger/graph"
 )
 
-type Raw struct {
+// raw defines a struct for binary SimpleGraphs format.
+type raw struct {
 	file *os.File
 	data mmap.MMap
 
@@ -24,7 +24,61 @@ type Raw struct {
 	BIndices []uint32
 }
 
-func SaveRaw(filename string, g graph.Graph) error {
+func (raw *raw) close() error {
+	var err1, err2 error
+	if raw.data != nil {
+		err1 = raw.data.Unmap()
+	}
+	if raw.file != nil {
+		err2 = raw.file.Close()
+	}
+	if err1 != nil {
+		return err1
+	}
+	return err2
+}
+
+func loadRaw(filename string) (*raw, error) {
+	var err error
+	raw := &raw{}
+
+	raw.file, err = os.OpenFile(filename, os.O_RDONLY, 0644)
+	if err != nil {
+		raw.close()
+		return nil, err
+	}
+
+	raw.data, err = mmap.Map(raw.file, mmap.RDONLY, 0)
+	if err != nil {
+		raw.close()
+		return nil, err
+	}
+
+	x := 0
+	copy((*[8]byte)(unsafe.Pointer(&raw.FIndPtrLen))[:], raw.data[x:x+8])
+	x += 8
+	copy((*[8]byte)(unsafe.Pointer(&raw.FIndicesLen))[:], raw.data[x:x+8])
+	x += 8
+
+	copy((*[8]byte)(unsafe.Pointer(&raw.BIndPtrLen))[:], raw.data[x:x+8])
+	x += 8
+	copy((*[8]byte)(unsafe.Pointer(&raw.BIndicesLen))[:], raw.data[x:x+8])
+	x += 8
+
+	raw.FIndPtr = ((*[1 << 40]uint64)(unsafe.Pointer(&raw.data[x])))[0:int(raw.FIndPtrLen)]
+	x += 8 * int(raw.FIndPtrLen)
+	raw.FIndices = ((*[1 << 40]uint32)(unsafe.Pointer(&raw.data[x])))[0:int(raw.FIndicesLen)]
+	x += 4 * int(raw.FIndicesLen)
+
+	raw.BIndPtr = ((*[1 << 40]uint64)(unsafe.Pointer(&raw.data[x])))[0:int(raw.BIndPtrLen)]
+	x += 8 * int(raw.BIndPtrLen)
+	raw.BIndices = ((*[1 << 40]uint32)(unsafe.Pointer(&raw.data[x])))[0:int(raw.BIndicesLen)]
+
+	return raw, nil
+}
+
+// Save saves a SimpleGraph to a file in raw (binary) format.
+func (g SimpleGraph) Save(filename string) error {
 	FIndPtr := g.FMat().IndPtr
 	FIndices := g.FMat().Indices
 	BIndPtr := g.BMat().IndPtr
@@ -94,49 +148,11 @@ func SaveRaw(filename string, g graph.Graph) error {
 	return nil
 }
 
-func LoadRaw(filename string) (*Raw, error) {
-	var err error
-	raw := &Raw{}
-
-	raw.file, err = os.OpenFile(filename, os.O_RDONLY, 0644)
+// Load loads a raw (binary) SimpleGraph file and returns a SimpleGraph.
+func Load(fn string) (SimpleGraph, error) {
+	raw, err := loadRaw(fn)
 	if err != nil {
-		raw.Close()
-		return nil, err
-	}
-
-	raw.data, err = mmap.Map(raw.file, mmap.RDONLY, 0)
-	if err != nil {
-		raw.Close()
-		return nil, err
-	}
-
-	x := 0
-	copy((*[8]byte)(unsafe.Pointer(&raw.FIndPtrLen))[:], raw.data[x:x+8])
-	x += 8
-	copy((*[8]byte)(unsafe.Pointer(&raw.FIndicesLen))[:], raw.data[x:x+8])
-	x += 8
-
-	copy((*[8]byte)(unsafe.Pointer(&raw.BIndPtrLen))[:], raw.data[x:x+8])
-	x += 8
-	copy((*[8]byte)(unsafe.Pointer(&raw.BIndicesLen))[:], raw.data[x:x+8])
-	x += 8
-
-	raw.FIndPtr = ((*[1 << 40]uint64)(unsafe.Pointer(&raw.data[x])))[0:int(raw.FIndPtrLen)]
-	x += 8 * int(raw.FIndPtrLen)
-	raw.FIndices = ((*[1 << 40]uint32)(unsafe.Pointer(&raw.data[x])))[0:int(raw.FIndicesLen)]
-	x += 4 * int(raw.FIndicesLen)
-
-	raw.BIndPtr = ((*[1 << 40]uint64)(unsafe.Pointer(&raw.data[x])))[0:int(raw.BIndPtrLen)]
-	x += 8 * int(raw.BIndPtrLen)
-	raw.BIndices = ((*[1 << 40]uint32)(unsafe.Pointer(&raw.data[x])))[0:int(raw.BIndicesLen)]
-
-	return raw, nil
-}
-
-func ReadRaw(fn string) (graph.Graph, error) {
-	raw, err := LoadRaw(fn)
-	if err != nil {
-		return graph.Graph{}, err
+		return SimpleGraph{}, err
 	}
 
 	find := make([]uint32, raw.FIndicesLen)
@@ -147,19 +163,5 @@ func ReadRaw(fn string) (graph.Graph, error) {
 	copy(findptr, raw.FIndPtr)
 	copy(bind, raw.BIndices)
 	copy(bindptr, raw.BIndPtr)
-	return graph.FromRaw(findptr, find, bindptr, bind)
-}
-
-func (raw *Raw) Close() error {
-	var err1, err2 error
-	if raw.data != nil {
-		err1 = raw.data.Unmap()
-	}
-	if raw.file != nil {
-		err2 = raw.file.Close()
-	}
-	if err1 != nil {
-		return err1
-	}
-	return err2
+	return FromRaw(findptr, find, bindptr, bind)
 }

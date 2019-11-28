@@ -6,7 +6,7 @@ import (
 	"github.com/shawnsmithdev/zermelo/zuint32"
 )
 
-// DijkstraState is a state holding dijkstra SP info
+// DijkstraState is a state holding Dijkstra Shortest Path info.
 type DijkstraState struct {
 	Parents      []uint32
 	Dists        []float32
@@ -30,7 +30,8 @@ func min(a, b float32) float32 {
 	return b
 }
 
-// Dijkstra returns a DijkstraState.
+// Dijkstra performs a Dijkstra Shortest Paths calculation from vertex `src` and returns a DijkstraState.
+// If `withpreds` is true, track all predecessors.
 func Dijkstra(g Graph, src uint32, weightFn func(uint32, uint32) float32, withPreds bool) DijkstraState {
 	nv := g.NumVertices()
 	vertLevel := make([]uint32, nv)

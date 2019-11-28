@@ -1,6 +1,16 @@
 package graph
 
-func (it EdgeIter) Next() (e SimpleEdge, done bool) {
-	r, c, d := it.mxiter.Next()
-	return SimpleEdge{src: r, dst: c}, d
+import "github.com/sbromberger/graphmatrix"
+
+type SimpleEdgeIter struct {
+	mxiter graphmatrix.NZIter
+}
+
+func (it *SimpleEdgeIter) Next() Edge {
+	r, c, _ := it.mxiter.Next()
+	return SimpleEdge{src: r, dst: c}
+}
+
+func (it *SimpleEdgeIter) Done() bool {
+	return it.mxiter.Done()
 }

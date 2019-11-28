@@ -2,17 +2,13 @@ package graph
 
 // This file contains interface definitions for Graph and Edge types.
 
-import (
-	"github.com/sbromberger/graphmatrix"
-)
-
 type Edge interface {
 	// Src returns the source index of the edge
 	Src() uint32
 	// Dst returns the destination index of the edge
 	Dst() uint32
 	// Weight returns the weight of the edge
-	Weight() float64
+	Weight() float32
 }
 
 // EdgeList is a slice of edges
@@ -37,8 +33,9 @@ func (e EdgeList) Less(i, j int) bool {
 	return e[i].Dst() < e[j].Dst()
 }
 
-type EdgeIter struct {
-	mxiter *graphmatrix.NZIter
+type EdgeIter interface {
+	Next() Edge
+	Done() bool
 }
 
 type Graph interface {
@@ -58,4 +55,6 @@ type Graph interface {
 	NumEdges() uint64
 	// NumVertices returns the number of vertices in a graph.
 	NumVertices() uint32
+	// Edges returns an iterator to graph edges.
+	Edges() EdgeIter
 }

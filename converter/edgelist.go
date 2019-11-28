@@ -1,14 +1,20 @@
-package persistence
+package converter
 
 import (
 	"bufio"
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/sbromberger/graph"
+	graph "github.com/sbromberger/gographs"
 )
+
+func splitLine(line string) []string {
+	s := regexp.MustCompile(`[\,\s]+`).Split(line, -1)
+	return s
+}
 
 func readEdgeList(scanner *bufio.Scanner, offset uint32) ([]uint32, []uint32, error) {
 	var l string
@@ -16,8 +22,12 @@ func readEdgeList(scanner *bufio.Scanner, offset uint32) ([]uint32, []uint32, er
 	ds := make([]uint32, 0, 100)
 	for scanner.Scan() {
 		l = scanner.Text()
-		pieces := strings.Split(l, ",")
-		if len(pieces) > 2 {
+
+		if strings.HasPrefix(l, "#") {
+			continue
+		}
+		pieces := splitLine(l)
+		if len(pieces) != 2 {
 			return []uint32{}, []uint32{}, fmt.Errorf("Parsing error: got %s", l)
 		}
 		u64, err := strconv.ParseUint(pieces[0], 10, 32)
@@ -40,17 +50,17 @@ func readEdgeList(scanner *bufio.Scanner, offset uint32) ([]uint32, []uint32, er
 }
 
 // ReadEdgeList returns a graph from an edgelist.
-func ReadEdgeList(fn string) (graph.Graph, error) {
+func ReadEdgeList(fn string) (graph.SimpleGraph, error) {
 	f, err := os.OpenFile(fn, os.O_RDONLY, 0644)
 	if err != nil {
-		return graph.Graph{}, err
+		return graph.SimpleGraph{}, err
 	}
 	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
 	ss, ds, err := readEdgeList(scanner, 0)
 	if err != nil {
-		return graph.Graph{}, err
+		return graph.SimpleGraph{}, err
 	}
 
 	return graph.New(ss, ds)
