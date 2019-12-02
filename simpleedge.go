@@ -16,10 +16,6 @@ func (e SimpleEdge) Dst() uint32 {
 	return e.dst
 }
 
-func (e SimpleEdge) Weight() float32 {
-	return 1.0
-}
-
 func (e SimpleEdge) String() string {
 	return fmt.Sprintf("SimpleEdge %d -> %d", e.Src(), e.Dst())
 }

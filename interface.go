@@ -7,8 +7,6 @@ type Edge interface {
 	Src() uint32
 	// Dst returns the destination index of the edge
 	Dst() uint32
-	// Weight returns the weight of the edge
-	Weight() float32
 }
 
 // EdgeList is a slice of edges
