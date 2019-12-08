@@ -36,6 +36,11 @@ type EdgeIter interface {
 	Done() bool
 }
 
+type VertexIter interface {
+	Next() uint32
+	Done() bool
+}
+
 type Graph interface {
 	// OutDegree returns the outdegree of vertex u.
 	OutDegree(u uint32) uint32
@@ -55,4 +60,5 @@ type Graph interface {
 	NumVertices() uint32
 	// Edges returns an iterator to graph edges.
 	Edges() EdgeIter
+	Vertices() VertexIter
 }
